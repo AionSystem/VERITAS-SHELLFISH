@@ -327,6 +327,10 @@
             <button class="species-btn" data-species="Butter Clam" onclick="selectSpecies('Butter Clam')"><div class="species-icon">🦪</div><div class="species-label">Butter Clam</div></button>
             <button class="species-btn" data-species="Blue Mussel" onclick="selectSpecies('Blue Mussel')"><div class="species-icon">🐚</div><div class="species-label">Blue Mussel</div></button>
             <button class="species-btn" data-species="Pacific Oyster" onclick="selectSpecies('Pacific Oyster')"><div class="species-icon">🦪</div><div class="species-label">Pacific Oyster</div></button>
+            <button class="species-btn" data-species="Razor Clam" onclick="selectSpecies('Razor Clam')"><div class="species-icon">🦪</div><div class="species-label">Razor Clam</div></button>
+            <button class="species-btn" data-species="Manila Clam" onclick="selectSpecies('Manila Clam')"><div class="species-icon">🐚</div><div class="species-label">Manila Clam</div></button>
+            <button class="species-btn" data-species="Geoduck" onclick="selectSpecies('Geoduck')"><div class="species-icon">🦪</div><div class="species-label">Geoduck</div></button>
+            <button class="species-btn" data-species="Scallop" onclick="selectSpecies('Scallop')"><div class="species-icon">🐚</div><div class="species-label">Scallop</div></button>
             <button class="species-btn" data-species="Other" onclick="selectSpecies('Other')"><div class="species-icon">📝</div><div class="species-label">Other</div></button>
           </div>
         </div>
@@ -470,6 +474,9 @@
     <ul class="footer-links">
       <li><a href="https://github.com/AionSystem/VERITAS" target="_blank">GitHub</a></li>
       <li><a href="https://aionsystem.github.io">AION</a></li>
+      <li><a href="https://coastalscience.noaa.gov/" target="_blank">NCCOS</a></li>
+      <li><a href="https://www.noaa.gov/" target="_blank">NOAA</a></li>
+      <li><a href="https://www.fisheries.noaa.gov/" target="_blank">NOAA Fisheries</a></li>
     </ul>
   </footer>
 </div>
@@ -497,6 +504,19 @@ const STATE = {
   respondMap: null, reportMap: null, reportMarker: null,
   kbFiles: []
 };
+
+// ==================== CUSTOM CURSOR ====================
+const cursor = document.getElementById('custom-cursor');
+if (cursor) {
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = e.clientX + 'px';
+    cursor.style.top = e.clientY + 'px';
+  });
+  document.querySelectorAll('a, button, .veritas-tab, .photo-zone, .result-btn, .species-btn, .loc-opt, .export-btn').forEach(el => {
+    el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+    el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+  });
+}
 
 // ==================== PHOTO & AI (simulated) ====================
 function handlePhoto(input) {
