@@ -1,1 +1,764 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1B3B6F">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="description" content="VERITAS‑SHELLFISH — Point‑of‑Use HAB Toxin Detection with Epistemic Confidence Scoring. CERTUS Engine · STP Sealing · NOAA LOI Demonstration.">
+  <title>VERITAS‑SHELLFISH — HAB Toxin Detection</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;0,900;1,300&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/shp-write@0.3.2/shpwrite.js"></script>
+  <script src="/VERITAS/public/certus-engine-v2.5.js"></script>
+  <script src="/VERITAS/public/ai-analysis.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0a121f; --bg-deep: #050a14; --surface: #13243a; --panel: #1a304a;
+      --border: #2a4a6a; --noaa-blue: #1B3B6F; --noaa-mid: #4A7B9D;
+      --cyan-accent: #00D4FF; --amber: #f0a500; --amber-d: #b07800;
+      --gold: #D4AF37; --text: #d4e2f0; --muted: #7a9aba; --dim: #3a5a7a;
+      --red: #ff4d4d; --edu: #4ade80; --quantum: #ce93d8;
+      --mono: 'Share Tech Mono', monospace; --sans: 'Barlow Condensed', sans-serif;
+      --serif: 'Crimson Pro', Georgia, serif; --jmono: 'JetBrains Mono', monospace;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --font-size-base: clamp(16px, 1vw + 8px, 20px);
+      --font-size-h1: clamp(48px, 8vw + 16px, 96px);
+      --font-size-h2: clamp(28px, 4vw + 8px, 44px);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{
+      background:var(--bg); color:var(--text); font-family:var(--sans);
+      font-size:var(--font-size-base); line-height:1.5; overflow-x:hidden;
+      cursor:none; transition:background 0.5s ease;
+    }
+    body::before{
+      content:''; position:fixed; inset:0;
+      background-image:linear-gradient(rgba(0,212,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.025) 1px,transparent 1px);
+      background-size:48px 48px; pointer-events:none; z-index:0;
+    }
+    body::after{
+      content:''; position:fixed; inset:0;
+      background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+      pointer-events:none; z-index:0;
+    }
+    .custom-cursor{width:20px;height:20px;border:2px solid var(--cyan-accent);border-radius:50%;position:fixed;pointer-events:none;z-index:9999;mix-blend-mode:difference;transition:transform 0.1s ease,background 0.2s ease;transform:translate(-50%,-50%);}
+    .custom-cursor.hover{transform:translate(-50%,-50%) scale(1.5);background:rgba(0,212,255,0.1);border-color:var(--gold);}
+    #hero-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;opacity:0.35;pointer-events:none;}
+    .wrapper{max-width:1200px;margin:0 auto;padding:0 24px;position:relative;z-index:2;}
+    nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:16px;}
+    .logo{font-family:var(--mono);font-size:18px;letter-spacing:3px;color:var(--cyan-accent);text-decoration:none;display:flex;align-items:center;gap:10px;}
+    .logo span{color:var(--muted);}
+    .nav-links{display:flex;gap:32px;list-style:none;}
+    .nav-links a{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--text);text-decoration:none;text-transform:uppercase;border-bottom:1px solid transparent;transition:color 0.2s,border-color 0.2s;}
+    .nav-links a:hover{color:var(--cyan-accent);border-bottom-color:var(--cyan-accent);}
+    .nav-hamburger{display:none;flex-direction:column;justify-content:space-between;width:24px;height:18px;cursor:pointer;background:none;border:none;padding:0;z-index:110;}
+    .nav-hamburger span{display:block;width:100%;height:2px;background:var(--cyan-accent);border-radius:1px;transition:transform 0.25s ease,opacity 0.25s ease;}
+    .nav-hamburger.open span:nth-child(1){transform:translateY(8px) rotate(45deg);}
+    .nav-hamburger.open span:nth-child(2){opacity:0;}
+    .nav-hamburger.open span:nth-child(3){transform:translateY(-8px) rotate(-45deg);}
+    .mobile-nav{display:none;position:fixed;top:56px;left:0;right:0;z-index:99;background:rgba(10,18,31,0.98);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);flex-direction:column;padding:8px 0;}
+    .mobile-nav.open{display:flex;}
+    .mobile-nav a{font-family:var(--mono);font-size:12px;letter-spacing:2px;color:var(--text);text-decoration:none;text-transform:uppercase;padding:14px 28px;border-bottom:1px solid var(--border);transition:color 0.15s ease,background 0.15s ease;display:flex;align-items:center;gap:10px;}
+    .mobile-nav a:last-child{border-bottom:none;}
+    .mobile-nav a:hover{color:var(--cyan-accent);background:rgba(0,212,255,0.04);}
+    .mobile-nav a::before{content:'—';color:var(--cyan-accent);font-size:10px;opacity:0.6;}
+    .lang-selector{display:flex;gap:6px;margin-left:auto;margin-right:20px;}
+    .lang-btn{background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:9px;padding:4px 8px;border-radius:20px;cursor:pointer;transition:all 0.2s;}
+    .lang-btn.active,.lang-btn:hover{border-color:var(--cyan-accent);color:var(--cyan-accent);background:rgba(0,212,255,0.1);}
+    .mobile-lang-row{display:flex;gap:8px;padding:12px 28px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+    .triple-time{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:40px 0;}
+    .time-cell{background:var(--bg);padding:18px 20px;transition:background 0.2s ease;}
+    .time-cell:hover{background:var(--surface);}
+    .time-sys{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--cyan-accent);text-transform:uppercase;margin-bottom:6px;}
+    .time-val{font-family:var(--mono);font-size:14px;color:var(--cyan-accent);letter-spacing:1px;line-height:1.3;min-height:36px;display:flex;align-items:center;}
+    .time-val.loading{color:var(--dim);font-size:11px;}
+    .veritas-tabs{display:flex;border-bottom:1px solid var(--border);margin:32px 0 24px;}
+    .veritas-tab{flex:1;padding:12px 0;font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all 0.2s;}
+    .veritas-tab.active{color:var(--cyan-accent);border-bottom-color:var(--cyan-accent);}
+    .veritas-view{display:none;}
+    .veritas-view.active{display:block;}
+    .step-progress{display:flex;align-items:center;margin-bottom:28px;gap:0;}
+    .step-node{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;}
+    .step-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:600;border:2px solid var(--border);color:var(--muted);background:var(--surface);transition:all 0.3s var(--ease);}
+    .step-circle.active{border-color:var(--cyan-accent);color:var(--cyan-accent);background:rgba(0,212,255,0.12);box-shadow:0 0 16px rgba(0,212,255,0.25);}
+    .step-circle.done{border-color:var(--edu);color:var(--edu);background:rgba(74,222,128,0.1);}
+    .step-label{font-family:var(--mono);font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+    .step-label.active{color:var(--cyan-accent);}
+    .step-line{flex:1;height:2px;background:var(--border);margin-bottom:18px;}
+    .step-line.done{background:var(--edu);}
+    .step-panel{display:none;animation:stepIn 0.3s var(--ease);}
+    .step-panel.active{display:block;}
+    @keyframes stepIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+    .step-title{font-family:var(--sans);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:4px;}
+    .step-subtitle{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:24px;}
+    .photo-zone{border:2px dashed var(--border);border-radius:4px;background:var(--surface);aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;overflow:hidden;position:relative;}
+    .photo-zone:hover{border-color:var(--cyan-accent);background:rgba(0,212,255,0.05);}
+    .photo-zone.has-photo{border-style:solid;border-color:var(--cyan-accent);}
+    .photo-icon{font-size:40px;margin-bottom:12px;opacity:0.4;}
+    .photo-hint{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;}
+    #photoPreview{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;}
+    #photoPreview.show{display:block;}
+    .photo-retake{position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,0.7);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:9px;padding:4px 10px;cursor:pointer;letter-spacing:1px;display:none;}
+    .photo-retake.show{display:block;}
+    #photoInput{display:none;}
+    .photo-ai-status{margin-top:12px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:10px;color:var(--muted);display:none;}
+    .photo-ai-status.show{display:flex;align-items:center;gap:8px;}
+    .result-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px;}
+    .result-btn{padding:16px 10px;border:2px solid var(--border);background:var(--surface);border-radius:8px;cursor:pointer;text-align:center;transition:all 0.15s;}
+    .result-btn:hover{border-color:var(--cyan-accent);background:rgba(0,212,255,0.05);}
+    .result-btn.selected{border-color:var(--cyan-accent);background:rgba(0,212,255,0.12);}
+    .result-label{font-family:var(--sans);font-size:16px;font-weight:700;letter-spacing:1px;margin-bottom:6px;}
+    .result-desc{font-size:11px;color:var(--muted);}
+    .species-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px;}
+    .species-btn{padding:12px 8px;border:1px solid var(--border);background:var(--surface);border-radius:4px;cursor:pointer;text-align:center;transition:all 0.15s;}
+    .species-btn:hover{border-color:var(--border);background:var(--panel);}
+    .species-btn.selected{border-color:var(--cyan-accent);background:rgba(0,212,255,0.12);}
+    .species-icon{font-size:22px;margin-bottom:6px;}
+    .species-label{font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+    .form-group{margin-bottom:20px;}
+    .form-label{font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--cyan-accent);margin-bottom:8px;display:block;}
+    .form-input,.form-select,.form-textarea{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--sans);font-size:14px;}
+    .location-options{display:flex;gap:8px;margin-bottom:16px;}
+    .loc-opt{flex:1;padding:12px;border:2px solid var(--border);background:var(--surface);border-radius:4px;cursor:pointer;text-align:center;transition:all 0.15s;}
+    .loc-opt:hover{border-color:var(--cyan-accent);}
+    .loc-opt.selected{border-color:var(--cyan-accent);background:rgba(0,212,255,0.12);}
+    .loc-opt-label{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text);}
+    .loc-opt-desc{font-size:11px;color:var(--muted);margin-top:4px;}
+    .fuzzy-notice{padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:4px;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:0.5px;margin-bottom:12px;display:none;}
+    .fuzzy-notice.show{display:block;}
+    #locationMap{height:180px;border:1px solid var(--border);border-radius:4px;margin-bottom:12px;overflow:hidden;}
+    .gps-coords{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:0.5px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:4px;margin-bottom:12px;}
+    .text-location{margin-top:12px;}
+    .submit-summary{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:20px;}
+    .summary-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--dim);}
+    .summary-row:last-child{border-bottom:none;}
+    .summary-key{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+    .summary-val{font-family:var(--mono);font-size:11px;color:var(--text);}
+    .anon-notice{display:flex;gap:10px;padding:12px;background:rgba(74,222,128,0.08);border:1px solid var(--edu);border-radius:4px;margin-bottom:20px;font-size:12px;color:var(--muted);}
+    .btn{display:block;width:100%;padding:14px;font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;border:none;cursor:pointer;border-radius:4px;transition:all 0.15s;}
+    .btn-primary{background:var(--cyan-accent);color:#000;font-weight:600;}
+    .btn-primary:hover{background:#00aacc;}
+    .btn-primary:disabled{opacity:0.4;cursor:not-allowed;}
+    .btn-secondary{background:var(--surface);color:var(--text);border:1px solid var(--border);margin-top:10px;}
+    .btn-secondary:hover{border-color:var(--cyan-accent);color:var(--cyan-accent);}
+    .btn-sm{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;width:auto;}
+    .access-input.error{border-color:var(--red);animation:shake 0.3s ease;}
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+    .confirm-screen{text-align:center;padding:32px 20px;display:none;}
+    .confirm-screen.show{display:block;}
+    .confirm-check{width:72px;height:72px;border-radius:50%;background:rgba(74,222,128,0.1);border:2px solid var(--edu);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 20px;animation:popIn 0.4s var(--ease);}
+    @keyframes popIn{from{transform:scale(0.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+    .dci-display{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:20px;margin:20px 0;}
+    .dci-label{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+    .dci-score-large{font-family:var(--sans);font-size:64px;letter-spacing:2px;line-height:1;margin-bottom:4px;}
+    .dci-score-large.high{color:var(--edu);}
+    .dci-score-large.watch{color:var(--amber);}
+    .dci-score-large.review{color:var(--red);}
+    .dci-tier-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;border:1px solid;margin-bottom:12px;}
+    .dci-tier-badge.high{border-color:var(--edu);color:var(--edu);background:rgba(74,222,128,0.12);}
+    .dci-tier-badge.watch{border-color:var(--amber);color:var(--amber);background:rgba(240,165,0,0.12);}
+    .dci-tier-badge.review{border-color:var(--red);color:var(--red);background:rgba(255,77,77,0.12);}
+    .dci-explain{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:0.5px;line-height:1.6;}
+    .engagement-message{background:rgba(0,212,255,0.08);border-left:3px solid var(--cyan-accent);padding:12px;margin-bottom:20px;font-family:var(--mono);font-size:11px;text-align:left;}
+    .access-gate{max-width:400px;margin:60px auto;padding:32px 24px;background:var(--surface);border:1px solid var(--border);border-radius:4px;text-align:center;}
+    .access-gate-title{font-family:var(--sans);font-size:32px;letter-spacing:3px;color:var(--cyan-accent);margin-bottom:8px;}
+    .access-gate-sub{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1.5px;margin-bottom:28px;}
+    .access-input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:16px;letter-spacing:4px;text-align:center;text-transform:uppercase;margin-bottom:16px;outline:none;transition:border-color 0.2s;}
+    .access-input:focus{border-color:var(--cyan-accent);}
+    .respond-dashboard{padding:16px;display:none;}
+    .respond-dashboard.show{display:block;}
+    .confidence-dash{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+    .conf-card{padding:14px 10px;background:var(--surface);border:1px solid var(--border);border-radius:4px;text-align:center;}
+    .conf-card.high{border-color:var(--edu);background:rgba(74,222,128,0.08);}
+    .conf-card.watch{border-color:var(--amber);background:rgba(240,165,0,0.08);}
+    .conf-card.review{border-color:var(--red);background:rgba(255,77,77,0.08);}
+    .conf-count{font-family:var(--sans);font-size:40px;line-height:1;margin-bottom:4px;}
+    .conf-card.high .conf-count{color:var(--edu);}
+    .conf-card.watch .conf-count{color:var(--amber);}
+    .conf-card.review .conf-count{color:var(--red);}
+    .conf-tier{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+    #respondMap{height:320px;border:1px solid var(--border);border-radius:4px;margin-bottom:16px;overflow:hidden;}
+    .section-label{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+    .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+    .kb-uploader{margin:16px 0;padding:16px;background:var(--surface);border:1px dashed var(--cyan-accent);border-radius:4px;}
+    .calibration-panel{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:12px;margin:16px 0;font-family:var(--mono);font-size:9px;line-height:1.8;}
+    .export-section{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:16px;}
+    .export-header-preview{font-family:var(--mono);font-size:9px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;margin-top:12px;line-height:1.8;overflow-x:auto;white-space:pre;}
+    .export-btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+    .export-btn{flex:1;min-width:100px;padding:10px;background:var(--panel);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:all 0.15s;}
+    .export-btn:hover{border-color:var(--cyan-accent);color:var(--cyan-accent);}
+    .law6-footer{padding:12px 16px;background:rgba(255,77,77,0.05);border-top:1px solid rgba(255,77,77,0.2);font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:0.5px;line-height:1.7;text-align:center;}
+    .offline-banner,.sync-queue{background:rgba(255,77,77,0.1);border-bottom:1px solid var(--red);padding:8px 20px;font-family:var(--mono);font-size:10px;color:var(--red);letter-spacing:1px;display:none;align-items:center;gap:8px;margin-bottom:16px;}
+    .sync-queue{background:rgba(0,212,255,0.12);border-color:var(--cyan-accent);color:var(--cyan-accent);}
+    .offline-banner.show,.sync-queue.show{display:flex;}
+    .spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--cyan-accent);border-radius:50%;animation:spin 0.6s linear infinite;display:inline-block;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .toast-container{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
+    .toast{padding:10px 20px;background:var(--panel);border:1px solid var(--border);border-radius:100px;font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--text);animation:toastIn 0.3s var(--ease);pointer-events:none;}
+    @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .leaflet-container{background:#0a121f !important;font-family:var(--mono) !important;}
+    .dci-popup{font-family:var(--mono);font-size:10px;line-height:1.6;}
+    footer{border-top:1px solid var(--border);padding:40px 0;display:flex;justify-content:space-between;flex-wrap:wrap;gap:20px;font-family:var(--mono);font-size:10px;color:var(--muted);}
+    .footer-links{display:flex;gap:24px;list-style:none;}
+    .footer-links a{color:var(--muted);text-decoration:none;transition:color 0.2s;}
+    .footer-links a:hover{color:var(--cyan-accent);}
+    .sim-banner{position:fixed;bottom:10px;left:10px;background:rgba(27,59,111,0.9);color:white;padding:6px 16px;border-radius:30px;font-family:var(--mono);font-size:10px;z-index:999;border:1px solid var(--cyan-accent);}
+    @media (max-width: 800px) {
+      .nav-links{display:none;}
+      .nav-hamburger{display:flex;}
+      .lang-selector{display:none;}
+      .wrapper{padding:0 20px;}
+      .species-grid{grid-template-columns:1fr;}
+      .confidence-dash{grid-template-columns:1fr 1fr 1fr;}
+      .conf-count{font-size:32px;}
+      .result-grid{grid-template-columns:1fr;}
+    }
+  </style>
+</head>
+<body>
+<canvas id="hero-canvas"></canvas>
+<div class="custom-cursor" id="custom-cursor"></div>
+<div class="wrapper">
+  <nav>
+    <a href="/" class="logo">VERITAS<span>‑SHELLFISH</span></a>
+    <ul class="nav-links">
+      <li><a href="#" onclick="switchView('report')">🧪 Test</a></li>
+      <li><a href="#" onclick="switchView('alert')">⚠️ Alert</a></li>
+      <li><a href="#" onclick="switchView('respond')">📊 Dashboard</a></li>
+    </ul>
+    <div class="lang-selector" id="langSelector"></div>
+    <button class="nav-hamburger" id="nav-hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+  <div class="mobile-nav" id="mobile-nav">
+    <div class="mobile-lang-row" id="mobileLangRow"></div>
+    <a href="#" onclick="switchView('report')">🧪 Test Shellfish</a>
+    <a href="#" onclick="switchView('alert')">⚠️ Unsafe Harvest Alert</a>
+    <a href="#" onclick="switchView('respond')">📊 Regulator Dashboard</a>
+  </div>
+  <div class="offline-banner" id="offlineBanner"><span>📡</span><span data-i18n="offline">Offline — tests saved locally</span></div>
+  <div class="sync-queue" id="syncQueue"><span class="spinner"></span><span id="syncQueueText" data-i18n="syncing">Syncing...</span></div>
+
+  <div class="veritas-tabs">
+    <button class="veritas-tab active" id="navReport" onclick="switchView('report')">🧪 Test Shellfish</button>
+    <button class="veritas-tab" id="navAlert" onclick="switchView('alert')">⚠️ Unsafe Harvest Alert</button>
+    <button class="veritas-tab" id="navRespond" onclick="switchView('respond')">📊 Regulator Dashboard</button>
+  </div>
+
+  <!-- REPORT VIEW (Test Shellfish) -->
+  <div class="veritas-view active" id="viewReport">
+    <div class="confirm-screen" id="confirmScreen">
+      <div class="confirm-check">✓</div>
+      <div style="font-family:var(--sans);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:6px;" data-i18n="report_received">TEST RECORDED</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:24px;" data-i18n="certus_scored">CERTUS Engine · Confidence Scored</div>
+      <div class="dci-display">
+        <div class="dci-label">TOXIN CONFIDENCE INDEX · CERTUS v2.5</div>
+        <div class="dci-score-large" id="confirmDciScore">—</div>
+        <div id="confirmDciBadge" class="dci-tier-badge high">HIGH CONFIDENCE</div>
+        <div class="dci-explain" data-i18n="dci_explain">Confidence scored on signal quality · corroboration · freshness · matrix consistency.</div>
+      </div>
+      <div id="engagementMessage" class="engagement-message"></div>
+      <button class="btn btn-primary" onclick="resetReport()">Test Another Sample</button>
+      <button class="btn btn-secondary" onclick="switchView('respond')">View Dashboard</button>
+    </div>
+    <div id="reportForm">
+      <div class="step-progress">
+        <div class="step-node"><div class="step-circle active" id="sc1">1</div><div class="step-label active" id="sl1">Strip</div></div>
+        <div class="step-line" id="sline1"></div>
+        <div class="step-node"><div class="step-circle" id="sc2">2</div><div class="step-label" id="sl2">Result</div></div>
+        <div class="step-line" id="sline2"></div>
+        <div class="step-node"><div class="step-circle" id="sc3">3</div><div class="step-label" id="sl3">Details</div></div>
+        <div class="step-line" id="sline3"></div>
+        <div class="step-node"><div class="step-circle" id="sc4">4</div><div class="step-label" id="sl4">Harvest Zone</div></div>
+        <div class="step-line" id="sline4"></div>
+        <div class="step-node"><div class="step-circle" id="sc5">5</div><div class="step-label" id="sl5">Review</div></div>
+      </div>
+      <div class="step-panel active" id="step1">
+        <div class="step-title">PHOTOGRAPH TEST STRIP</div>
+        <div class="step-subtitle">Capture the lateral flow assay result clearly</div>
+        <div class="photo-zone" id="photoZone" onclick="triggerPhotoCapture()">
+          <div class="photo-icon">📷</div>
+          <div class="photo-hint">TAP TO PHOTOGRAPH LFA STRIP</div>
+          <img id="photoPreview" alt="Test strip">
+          <button class="photo-retake" id="photoRetake" onclick="event.stopPropagation(); triggerPhotoCapture()">RETAKE</button>
+        </div>
+        <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+        <div class="photo-ai-status" id="photoAiStatus"><span class="spinner"></span><span id="aiStatusText">CERTUS analyzing test lines...</span></div>
+        <button class="btn btn-primary" style="margin-top:16px;" id="step1Next" onclick="goStep(2)" disabled>NEXT</button>
+      </div>
+      <div class="step-panel" id="step2">
+        <div class="step-title">TEST RESULT</div>
+        <div class="step-subtitle">Read the test and control lines</div>
+        <div class="result-grid">
+          <button class="result-btn" onclick="selectResult('negative')" id="result-negative">
+            <div class="result-label">Negative</div>
+            <div class="result-desc">Control line only · No toxin detected</div>
+          </button>
+          <button class="result-btn" onclick="selectResult('trace')" id="result-trace">
+            <div class="result-label">Trace</div>
+            <div class="result-desc">Faint test line · Below action level</div>
+          </button>
+          <button class="result-btn" onclick="selectResult('positive')" id="result-positive">
+            <div class="result-label">Positive</div>
+            <div class="result-desc">Clear test line · Action level exceeded</div>
+          </button>
+          <button class="result-btn" onclick="selectResult('strong_positive')" id="result-strong">
+            <div class="result-label">Strong Positive</div>
+            <div class="result-desc">Test line > control · High toxin</div>
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn btn-secondary" style="flex:0 0 80px" onclick="goStep(1)">← BACK</button>
+          <button class="btn btn-primary" id="step2Next" onclick="goStep(3)" disabled>NEXT</button>
+        </div>
+      </div>
+      <div class="step-panel" id="step3">
+        <div class="step-title">SAMPLE DETAILS</div>
+        <div class="step-subtitle">Species, toxin type, and traceability</div>
+        <div class="form-group"><label class="form-label">Shellfish Species</label>
+          <div class="species-grid">
+            <button class="species-btn" data-species="Butter Clam" onclick="selectSpecies('Butter Clam')"><div class="species-icon">🦪</div><div class="species-label">Butter Clam</div></button>
+            <button class="species-btn" data-species="Blue Mussel" onclick="selectSpecies('Blue Mussel')"><div class="species-icon">🐚</div><div class="species-label">Blue Mussel</div></button>
+            <button class="species-btn" data-species="Pacific Oyster" onclick="selectSpecies('Pacific Oyster')"><div class="species-icon">🦪</div><div class="species-label">Pacific Oyster</div></button>
+            <button class="species-btn" data-species="Other" onclick="selectSpecies('Other')"><div class="species-icon">📝</div><div class="species-label">Other</div></button>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label">Toxin Type</label>
+          <select class="form-select" id="toxinType">
+            <option value="PST">Paralytic Shellfish Toxin (PST / Saxitoxin)</option>
+            <option value="ASP">Amnesic Shellfish Poisoning (ASP / Domoic Acid)</option>
+            <option value="DSP">Diarrhetic Shellfish Poisoning (DSP)</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">LFA Strip Lot Number</label><input type="text" id="lotNumber" class="form-input" placeholder="e.g., LFA-PST-2026-04"></div>
+        <div class="form-group"><label class="form-label">Harvest Time (for freshness scoring)</label><input type="datetime-local" id="harvestTime" class="form-input"></div>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn btn-secondary" style="flex:0 0 80px" onclick="goStep(2)">← BACK</button>
+          <button class="btn btn-primary" id="step3Next" onclick="goStep(4)">NEXT</button>
+        </div>
+      </div>
+      <div class="step-panel" id="step4">
+        <div class="step-title">HARVEST ZONE</div>
+        <div class="step-subtitle">Pin the harvest location</div>
+        <div class="location-options">
+          <div class="loc-opt selected" id="locPrecise" onclick="selectLocMode('precise')"><div class="loc-opt-label">📍 Precise</div><div class="loc-opt-desc">Exact GPS</div></div>
+          <div class="loc-opt" id="locFuzzy" onclick="selectLocMode('fuzzy')"><div class="loc-opt-label">🔵 Area</div><div class="loc-opt-desc">±100m radius</div></div>
+        </div>
+        <div class="fuzzy-notice" id="fuzzyNotice">Area mode selected — exact location protected. Suitable for subsistence harvest zones.</div>
+        <div id="locationMap"></div>
+        <div class="gps-coords" id="gpsCoords"><span style="color:var(--muted)">Acquiring GPS...</span></div>
+        <div class="form-group text-location">
+          <label class="form-label">Describe location (optional)</label>
+          <input type="text" id="textLocation" class="form-input" placeholder="e.g., 'Ketchikan shellfish bed'">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn btn-secondary" style="flex:0 0 80px" onclick="goStep(3)">← BACK</button>
+          <button class="btn btn-primary" id="step4Next" onclick="goStep(5)" disabled>NEXT</button>
+        </div>
+      </div>
+      <div class="step-panel" id="step5">
+        <div class="step-title">REVIEW</div>
+        <div class="step-subtitle">Confirm and seal test result</div>
+        <div class="submit-summary" id="submitSummary"></div>
+        <div class="anon-notice"><span class="anon-icon">🔒</span><span>Anonymous submission · EXIF stripped · STP sealed</span></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary" style="flex:0 0 80px" onclick="goStep(4)">← BACK</button>
+          <button class="btn btn-primary" id="submitBtn" onclick="submitReport()">SEAL & SUBMIT</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERT VIEW (Unsafe Harvest Alert) -->
+  <div class="veritas-view" id="viewAlert">
+    <div style="text-align:center;padding:40px 20px;background:linear-gradient(135deg,#ff4d4d 0%,#cc0000 100%);border-radius:20px;margin-bottom:30px;">
+      <div style="font-size:80px;">⚠️</div>
+      <h1 style="color:white;font-size:32px;margin:20px 0;">UNSAFE HARVEST ALERT</h1>
+      <p style="color:rgba(255,255,255,0.9);margin-bottom:30px;">Alert regulators and communities of potentially unsafe shellfish in this harvest zone.</p>
+      <button onclick="sendHarvestAlert()" style="background:white;color:#ff4d4d;font-size:28px;padding:20px 40px;border:none;border-radius:60px;font-weight:bold;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.3);">🚨 SEND ALERT 🚨</button>
+    </div>
+    <div style="background:var(--surface);border-radius:12px;padding:20px;margin-bottom:20px;">
+      <h3>📍 Your Location Status</h3>
+      <p id="lastLocationStatus" style="font-family:monospace;font-size:12px;color:var(--cyan-accent);margin-top:8px;">Acquiring GPS...</p>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;"><span>📡 GPS: </span><span id="gpsStatusAlert">Waiting for signal</span></div>
+    </div>
+  </div>
+
+  <!-- RESPOND VIEW (Regulator Dashboard) -->
+  <div class="veritas-view" id="viewRespond">
+    <div id="accessGate" class="access-gate">
+      <div class="access-gate-title">RESTRICTED</div>
+      <div class="access-gate-sub">Regulator / Lab Access</div>
+      <input class="access-input" id="accessInput" type="text" placeholder="ACCESS CODE" maxlength="8" onkeyup="checkAccess(event)">
+      <div id="accessError" style="display:none;font-family:var(--mono);font-size:10px;color:var(--red);margin-bottom:12px;">Invalid code</div>
+      <button class="btn btn-primary" onclick="checkAccessBtn()">ENTER</button>
+    </div>
+    <div class="respond-dashboard" id="respondDashboard">
+      <div class="section-label">📊 Confidence Dashboard</div>
+      <div class="confidence-dash">
+        <div class="conf-card high"><div class="conf-count" id="dashHigh">0</div><div class="conf-tier">High<br>Confidence</div></div>
+        <div class="conf-card watch"><div class="conf-count" id="dashWatch">0</div><div class="conf-tier">Watch<br>Monitor</div></div>
+        <div class="conf-card review"><div class="conf-count" id="dashReview">0</div><div class="conf-tier">Review<br>Required</div></div>
+      </div>
+      <div class="section-label">🗺️ Harvest Zone Confidence Map</div>
+      <div id="respondMap"></div>
+
+      <!-- Knowledge Base Uploader -->
+      <div class="kb-uploader">
+        <div class="section-label">📚 Knowledge Base — Calibration Data</div>
+        <div class="photo-zone" onclick="triggerKBUpload()" style="aspect-ratio:auto;padding:20px;">
+          <div class="photo-icon">📄</div>
+          <div class="photo-hint">DROP PDF, CSV, OR EXCEL FILES</div>
+        </div>
+        <input type="file" id="kbFileInput" accept=".pdf,.csv,.xlsx,.xls" multiple style="display:none" onchange="handleKBUpload(this)">
+        <div id="kbUploadStatus" class="photo-ai-status"></div>
+        <div id="kbFileList" style="margin-top:12px;font-family:var(--mono);font-size:9px;"></div>
+      </div>
+
+      <!-- Calibration Panel -->
+      <div class="calibration-panel" id="calibrationPanel">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <span style="color:var(--cyan-accent);font-weight:bold;">⚙️ ACTIVE CALIBRATION (MOCK)</span>
+          <span style="color:var(--muted);" id="calibLastUpdated"></span>
+        </div>
+        <pre id="calibParams" style="color:var(--text);">Loading calibration parameters...</pre>
+      </div>
+
+      <!-- Audit Trail Verifier -->
+      <div class="export-section">
+        <div class="section-label">🔍 Audit Trail Verifier</div>
+        <input class="access-input" id="auditHashInput" placeholder="Enter Seal Hash" style="margin-bottom:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="verifySeal()">Verify Seal</button>
+        <div id="auditResult" style="margin-top:12px;font-family:var(--mono);font-size:9px;"></div>
+      </div>
+
+      <!-- Export -->
+      <div class="export-section">
+        <div class="section-label">📤 Export Dataset</div>
+        <div class="export-btns">
+          <button class="export-btn" onclick="exportData('json')">JSON</button>
+          <button class="export-btn" onclick="exportData('csv')">CSV</button>
+          <button class="export-btn" onclick="exportData('geojson')">GeoJSON</button>
+          <button class="export-btn" id="stpSealBtn" onclick="stampWithSTP()" style="border-color:var(--cyan-accent);">🔒 STP Seal</button>
+        </div>
+        <div class="export-header-preview" id="exportPreview"></div>
+        <div id="stpSealDisplay" style="display:none;margin-top:16px;padding:12px;background:var(--surface);border:1px solid var(--cyan-accent);border-radius:4px;font-family:var(--mono);font-size:10px;"></div>
+      </div>
+
+      <div class="law6-footer">
+        <strong>⚠️ DECISION-SUPPORT INSTRUMENT ONLY</strong><br>
+        Confidence scores assist human judgment — they do not replace regulatory authority.
+      </div>
+    </div>
+  </div>
+
+  <div class="triple-time">
+    <div class="time-cell"><div class="time-sys">Gregorian</div><div class="time-val loading" id="tt-gregorian">· · ·</div></div>
+    <div class="time-cell"><div class="time-sys">13 Moon · Dreamspell</div><div class="time-val loading" id="tt-dreamspell">· · ·</div></div>
+    <div class="time-cell"><div class="time-sys">Hebrew Calendar</div><div class="time-val loading" id="tt-hebrew">· · ·</div></div>
+  </div>
+  <footer>
+    <div><strong>AionSystem</strong> · Sheldon K. Salmon · AI Reliability Architect<br>VERITAS‑SHELLFISH v1.0 · CERTUS Engine · STP · NOAA LOI Demo</div>
+    <ul class="footer-links">
+      <li><a href="https://github.com/AionSystem/VERITAS" target="_blank">GitHub</a></li>
+      <li><a href="https://aionsystem.github.io">AION</a></li>
+    </ul>
+  </footer>
+</div>
+<div class="sim-banner">🧪 SIMULATION MODE — NOAA LOI Demonstration</div>
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ==================== CONFIG & STATE (VERITAS‑SHELLFISH) ====================
+const CONFIG = {
+  SUPABASE_URL: 'https://spqqhvaqjwxcrdbujwna.supabase.co',
+  SUPABASE_ANON: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwcXFodmFxand4Y3JkYnVqd25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTY2NDIsImV4cCI6MjA5MDI5MjY0Mn0.1ibM3TwGS82NOAhpzZFbvdCzdveReqaM9sMIVDTO3Tg',
+  ACCESS_CODE: 'NOAA2026',
+  USE_SUPABASE: true,
+  MAP_CENTER: [55, -135],
+  MAP_ZOOM: 4,
+  FUZZY_RADIUS: 100,
+  DCI_THRESHOLDS: { HIGH: 0.70, WATCH: 0.40 }
+};
+const STATE = {
+  currentStep: 1, currentView: 'report',
+  markerLayer: null, photo: null, photoAiScore: null, photoAiConf: null,
+  testResult: null, species: null, toxinType: 'PST', lotNumber: '', harvestTime: null,
+  locMode: 'precise', coords: null, textLocation: null,
+  reports: [], isOnline: navigator.onLine, respondAuth: false,
+  respondMap: null, reportMap: null, reportMarker: null,
+  kbFiles: []
+};
+
+// ==================== PHOTO & AI (simulated) ====================
+function handlePhoto(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    STATE.photo = e.target.result;
+    document.getElementById('photoPreview').src = STATE.photo;
+    document.getElementById('photoPreview').classList.add('show');
+    document.getElementById('photoRetake').classList.add('show');
+    document.getElementById('photoZone').classList.add('has-photo');
+    runAiAnalysis();
+  };
+  reader.readAsDataURL(file);
+}
+function triggerPhotoCapture() { document.getElementById('photoInput').click(); }
+async function runAiAnalysis() {
+  const statusEl = document.getElementById('photoAiStatus');
+  const statusText = document.getElementById('aiStatusText');
+  statusEl.classList.add('show');
+  statusText.innerHTML = '<span class="spinner"></span> CERTUS analyzing test lines...';
+  // Simulate AI analysis (mock)
+  setTimeout(() => {
+    STATE.photoAiScore = 0.72 + Math.random() * 0.25;
+    STATE.photoAiConf = 0.65 + Math.random() * 0.30;
+    const lineIntensity = STATE.photoAiScore;
+    statusText.innerHTML = `✅ Test line intensity: ${lineIntensity.toFixed(2)} · Confidence: ${Math.round(STATE.photoAiConf*100)}%`;
+    document.getElementById('step1Next').disabled = false;
+  }, 800);
+}
+
+// ==================== STEP NAVIGATION ====================
+function goStep(step) {
+  if (step===2 && !STATE.photo) { toast('Photograph the test strip first'); return; }
+  for(let i=1;i<=5;i++){
+    document.getElementById(`step${i}`).classList.remove('active');
+    document.getElementById(`sc${i}`).classList.remove('active','done');
+    document.getElementById(`sl${i}`).classList.remove('active');
+  }
+  for(let i=1;i<=4;i++) document.getElementById(`sline${i}`).classList.remove('done');
+  for(let i=1;i<step;i++){
+    document.getElementById(`sc${i}`).classList.add('done');
+    document.getElementById(`sc${i}`).textContent='✓';
+    if(i<=4) document.getElementById(`sline${i}`).classList.add('done');
+  }
+  document.getElementById(`sc${step}`).classList.add('active');
+  document.getElementById(`sl${step}`).classList.add('active');
+  document.getElementById(`step${step}`).classList.add('active');
+  STATE.currentStep=step;
+  if(step===4) initLocationStep();
+  if(step===5) populateSummary();
+  window.scrollTo(0,0);
+}
+function selectResult(val) {
+  STATE.testResult = val;
+  document.querySelectorAll('.result-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById(`result-${val}`).classList.add('selected');
+  document.getElementById('step2Next').disabled = false;
+}
+function selectSpecies(sp) {
+  STATE.species = sp;
+  document.querySelectorAll('.species-btn').forEach(b=>b.classList.remove('selected'));
+  document.querySelector(`.species-btn[data-species="${sp}"]`).classList.add('selected');
+}
+function selectLocMode(mode) {
+  STATE.locMode = mode;
+  document.getElementById('locPrecise').classList.toggle('selected', mode==='precise');
+  document.getElementById('locFuzzy').classList.toggle('selected', mode==='fuzzy');
+  document.getElementById('fuzzyNotice').style.display = mode==='fuzzy'?'block':'none';
+}
+function initLocationStep() {
+  if (!STATE.reportMap) {
+    STATE.reportMap = L.map('locationMap', {zoomControl:true, attributionControl:false});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(STATE.reportMap);
+    STATE.reportMap.setView(CONFIG.MAP_CENTER, 4);
+  }
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      STATE.coords = {lat:pos.coords.latitude, lng:pos.coords.longitude};
+      updateLocationPin();
+      document.getElementById('step4Next').disabled = false;
+      document.getElementById('gpsCoords').innerHTML = `✓ ${STATE.coords.lat.toFixed(5)}, ${STATE.coords.lng.toFixed(5)}`;
+    }, () => {
+      document.getElementById('gpsCoords').innerHTML = 'GPS unavailable — tap map to pin';
+      STATE.reportMap.on('click', e => {
+        STATE.coords = {lat:e.latlng.lat, lng:e.latlng.lng};
+        updateLocationPin();
+        document.getElementById('step4Next').disabled = false;
+        document.getElementById('gpsCoords').innerHTML = `✓ Manual pin: ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+      });
+    });
+  }
+}
+function updateLocationPin() {
+  if(!STATE.coords||!STATE.reportMap) return;
+  if(STATE.reportMarker) STATE.reportMap.removeLayer(STATE.reportMarker);
+  STATE.reportMarker = L.marker([STATE.coords.lat, STATE.coords.lng]).addTo(STATE.reportMap);
+  STATE.reportMap.setView([STATE.coords.lat, STATE.coords.lng], 12);
+}
+function populateSummary() {
+  STATE.toxinType = document.getElementById('toxinType').value;
+  STATE.lotNumber = document.getElementById('lotNumber').value;
+  STATE.harvestTime = document.getElementById('harvestTime').value;
+  const summary = document.getElementById('submitSummary');
+  summary.innerHTML = `
+    <div class="summary-row"><span class="summary-key">Test Result</span><span class="summary-val">${STATE.testResult}</span></div>
+    <div class="summary-row"><span class="summary-key">Species</span><span class="summary-val">${STATE.species}</span></div>
+    <div class="summary-row"><span class="summary-key">Toxin Type</span><span class="summary-val">${STATE.toxinType}</span></div>
+    <div class="summary-row"><span class="summary-key">Lot Number</span><span class="summary-val">${STATE.lotNumber||'—'}</span></div>
+    <div class="summary-row"><span class="summary-key">Harvest Time</span><span class="summary-val">${STATE.harvestTime||'—'}</span></div>
+    <div class="summary-row"><span class="summary-key">Location</span><span class="summary-val">${STATE.coords?`${STATE.coords.lat.toFixed(5)}, ${STATE.coords.lng.toFixed(5)}`:'—'}</span></div>
+  `;
+}
+async function submitReport() {
+  if (!STATE.coords) { toast('Pin harvest location'); return; }
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'SEALING...';
+  const report = {
+    uuid: generateUUID(), timestamp: new Date().toISOString(),
+    lat: STATE.coords.lat, lng: STATE.coords.lng,
+    testResult: STATE.testResult, species: STATE.species, toxinType: STATE.toxinType,
+    lotNumber: STATE.lotNumber, harvestTime: STATE.harvestTime,
+    photoAiScore: STATE.photoAiScore, photoAiConf: STATE.photoAiConf
+  };
+  // CERTUS scoring (mocked)
+  const dci = 0.65 + Math.random() * 0.30;
+  const tier = dci >= 0.70 ? 'high' : (dci >= 0.40 ? 'watch' : 'review');
+  report.confidenceScore = dci; report.confidenceTier = tier;
+  report.signalConfidence = STATE.photoAiScore; report.corroboration = 0.5;
+  report.freshness = 0.8; report.matrixConsistency = 0.7;
+  report.uncertaintyMass = 0.3; report.validityStatus = tier==='high'?'VALID':'DEGRADED';
+  STATE.reports.push(report);
+  showConfirmation(report);
+}
+function showConfirmation(report) {
+  document.getElementById('reportForm').style.display = 'none';
+  document.getElementById('confirmScreen').classList.add('show');
+  const score = report.confidenceScore;
+  const tier = report.confidenceTier;
+  document.getElementById('confirmDciScore').textContent = score.toFixed(2);
+  document.getElementById('confirmDciScore').className = `dci-score-large ${tier}`;
+  const badge = document.getElementById('confirmDciBadge');
+  badge.textContent = tier === 'high' ? 'HIGH CONFIDENCE' : (tier==='watch'?'WATCH / MONITOR':'REVIEW REQUIRED');
+  badge.className = `dci-tier-badge ${tier}`;
+}
+function resetReport() {
+  STATE.photo = null; STATE.testResult = null; STATE.species = null; STATE.coords = null;
+  document.getElementById('confirmScreen').classList.remove('show');
+  document.getElementById('reportForm').style.display = '';
+  document.getElementById('photoPreview').classList.remove('show');
+  document.getElementById('step1Next').disabled = true;
+  document.getElementById('step2Next').disabled = true;
+  document.getElementById('step4Next').disabled = true;
+  for(let i=1;i<=5;i++){ const sc=document.getElementById(`sc${i}`); sc.classList.remove('active','done'); sc.textContent=i; }
+  document.getElementById('step1').classList.add('active');
+  document.getElementById('sc1').classList.add('active');
+}
+
+// ==================== RESPOND DASHBOARD ====================
+function checkAccess(e){ if(e.key==='Enter') checkAccessBtn(); }
+function checkAccessBtn(){
+  if(document.getElementById('accessInput').value === CONFIG.ACCESS_CODE){
+    STATE.respondAuth = true;
+    document.getElementById('accessGate').style.display = 'none';
+    document.getElementById('respondDashboard').classList.add('show');
+    initRespondDashboard();
+  } else {
+    document.getElementById('accessError').style.display='block';
+  }
+}
+function initRespondDashboard(){
+  const versioned = STATE.reports;
+  document.getElementById('dashHigh').textContent = versioned.filter(r=>r.confidenceTier==='high').length;
+  document.getElementById('dashWatch').textContent = versioned.filter(r=>r.confidenceTier==='watch').length;
+  document.getElementById('dashReview').textContent = versioned.filter(r=>r.confidenceTier==='review').length;
+  if(!STATE.respondMap) initRespondMap(versioned); else plotReports(versioned);
+  updateCalibrationPanel();
+}
+function initRespondMap(reports){
+  STATE.respondMap = L.map('respondMap',{zoomControl:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(STATE.respondMap);
+  STATE.respondMap.setView(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM);
+  plotReports(reports);
+}
+function plotReports(reports){
+  if(!STATE.respondMap) return;
+  if(STATE.markerLayer) STATE.respondMap.removeLayer(STATE.markerLayer);
+  STATE.markerLayer = L.layerGroup().addTo(STATE.respondMap);
+  reports.forEach(r=>{
+    if(!r.lat) return;
+    const color = r.confidenceTier==='high'?'#4ade80':(r.confidenceTier==='watch'?'#f0a500':'#ff4d4d');
+    L.circleMarker([r.lat,r.lng],{radius:8,color,fillOpacity:0.6}).bindPopup(`${r.species} · ${r.testResult}<br>Confidence: ${r.confidenceScore?.toFixed(2)}`).addTo(STATE.markerLayer);
+  });
+}
+
+// ==================== KNOWLEDGE BASE ====================
+function triggerKBUpload(){ document.getElementById('kbFileInput').click(); }
+function handleKBUpload(input){
+  const files = Array.from(input.files);
+  STATE.kbFiles.push(...files);
+  const list = document.getElementById('kbFileList');
+  list.innerHTML = STATE.kbFiles.map(f=>`📄 ${f.name}`).join('<br>');
+  document.getElementById('kbUploadStatus').classList.add('show');
+  document.getElementById('kbUploadStatus').innerHTML = '✅ Files staged for calibration (simulation)';
+  updateCalibrationPanel();
+}
+function updateCalibrationPanel(){
+  // Mock calibration parameters
+  const params = {
+    PST: { lod_ug_100g: 40, threshold_au: 0.42, matrix_effects: {'Butter Clam':0.95,'Blue Mussel':1.05} },
+    ASP: { lod_ug_100g: 20, threshold_au: 0.38 },
+    lastUpdated: new Date().toLocaleString()
+  };
+  document.getElementById('calibParams').textContent = JSON.stringify(params, null, 2);
+  document.getElementById('calibLastUpdated').textContent = `Updated: ${params.lastUpdated}`;
+}
+
+// ==================== AUDIT TRAIL ====================
+function verifySeal(){
+  const hash = document.getElementById('auditHashInput').value;
+  const result = document.getElementById('auditResult');
+  if(hash.length < 8) { result.innerHTML = 'Enter a valid seal hash'; return; }
+  result.innerHTML = `✅ Seal verified (mock)<br>Timestamp: 2026-04-10T14:22:00Z<br>Device: iPhone15,2 · iOS 18.3<br>GPS: 55.342,-131.646<br>STP Issue: <a href="#" style="color:var(--cyan-accent);">github.com/AionSystem/STP/issues/42</a>`;
+}
+
+// ==================== EXPORT & STP (mock) ====================
+async function exportData(fmt){ toast(`${fmt.toUpperCase()} export ready (simulation)`); }
+async function stampWithSTP(){ toast('🔒 STP seal created (simulation)'); }
+
+// ==================== ALERT ====================
+function sendHarvestAlert(){ toast('🚨 Unsafe harvest alert sent to regulators (simulation)'); }
+
+// ==================== UTILS ====================
+function generateUUID(){ return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16);}); }
+function toast(msg){ const c=document.getElementById('toastContainer'); const d=document.createElement('div'); d.className='toast'; d.textContent=msg; c.appendChild(d); setTimeout(()=>d.remove(),2500); }
+function switchView(view){
+  document.querySelectorAll('.veritas-view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(`view${view.charAt(0).toUpperCase()+view.slice(1)}`).classList.add('active');
+  document.querySelectorAll('.veritas-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(`nav${view.charAt(0).toUpperCase()+view.slice(1)}`).classList.add('active');
+  if(view==='respond' && !STATE.respondAuth) setTimeout(()=>toast('Access code: NOAA2026'),600);
+  if(view==='alert') startLocationTracking();
+}
+function startLocationTracking(){
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(p=>{
+      document.getElementById('lastLocationStatus').innerHTML = `📍 ${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`;
+      document.getElementById('gpsStatusAlert').innerHTML = '✅ GPS locked';
+    });
+  }
+}
+// Triple-time display (simplified)
+const now = new Date();
+document.getElementById('tt-gregorian') && (document.getElementById('tt-gregorian').textContent = now.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}));
+document.getElementById('tt-dreamspell') && (document.getElementById('tt-dreamspell').textContent = 'Day 23, Spectral Moon 3/13');
+document.getElementById('tt-hebrew') && (document.getElementById('tt-hebrew').textContent = '17 Nisan 5786');
+
+// Init
+window.onload = ()=>{
+  if(!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
+};
+</script>
+</body>
+</html>
