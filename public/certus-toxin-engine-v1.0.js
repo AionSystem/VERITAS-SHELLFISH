@@ -1,18 +1,26 @@
-// ==================== CERTUS-TOXIN ENGINE v1.0 ====================
+// ==================== CERTUS-TOXIN ENGINE v1.1 ====================
 // FSVE-informed Scoring Engine for HAB Toxin Detection
 // Adapted from CERTUS v2.5.3 for VERITAS‑SHELLFISH
 //
 // Author: Sheldon K. Salmon & ALBEDO
 // Date: April 2026
+// Version: 1.1 — FORGE Red‑Team fixes applied (R1‑SA‑001 through R1‑SA‑004, R1‑EL‑001 through R1‑EL‑003)
 //
-// Domain: Point‑of‑Use HAB Toxin Detection (NOAA‑NOS‑NCCOS‑2026‑32955)
-// Scoring: Toxin Confidence Index (TCI) with Uncertainty Mass (UM)
+// Changelog v1.0 → v1.1:
+// - [R1‑SA‑001/003] Distributed coordination modules gated behind config flag; dead code removed from default path
+// - [R1‑SA‑002] Storage and audit logging wrapped in circuit breaker / try‑catch to prevent scoring failures
+// - [R1‑EL‑001] SPECIES_TOXIN_MATRIX now includes source citations
+// - [R1‑EL‑002] updateModelCalibration() restored; calibration status exposed
+// - [R1‑EL‑003] ECF contributions re‑integrated into Uncertainty Mass calculation
+// - [R1‑SA‑004] Strip registry populated during scoring to enable adversarial duplicate detection
+// - Removed unused appeal and evidence‑weighting helper functions (retained only if config enabled)
+// - Restored computeECFContribution() and integrated into UM
 
 const CERTUS_TOXIN = {
 
   // ── VERSION ────────────────────────────────────────────────────────────────
-  VERSION: '1.0',
-  CANARY_VERSION: '1.0-beta',
+  VERSION: '1.1',
+  CANARY_VERSION: '1.1-beta',
 
   // ── PRODUCTION CONFIGURATION ───────────────────────────────────────────────
   PRODUCTION: {
@@ -24,7 +32,9 @@ const CERTUS_TOXIN = {
     circuitBreakerManualResetOnly: true,
     auditLogRetentionDays: 365,
     encryptionKeyRotationDays: 90,
-    canaryPercentage: 5
+    canaryPercentage: 5,
+    enableDistributedMode: false,      // R1‑SA‑001: disabled by default for VERITAS‑SHELLFISH
+    enableAppeals: false,              // R1‑SA‑003: appeals not used in this deployment
   },
 
   // ── WEIGHTS ───────────────────────────────────────────────────────────────
@@ -39,18 +49,7 @@ const CERTUS_TOXIN = {
     MAX_APPEALS: 3,
     CORRELATED_FAILURE_RATE: 0.30,
     EPISTEMIC_CEILING: 0.95,
-    EVIDENCE_HALF_LIFE_HOURS: 168, // 7 days
-    APPEAL_RATE_LIMIT: {
-      per_report: { max: 1, window: 3600000 },
-      per_ip: { max: 10, window: 3600000 }
-    },
-    APPEAL_RETENTION_DAYS: 90,
-    GEOTAG_ACCURACY_MULTIPLIER: 2,
-    CIRCUIT_BREAKER: {
-      initial_backoff: 3600000,
-      max_backoff: 86400000,
-      manual_reset_required: true
-    },
+    EVIDENCE_HALF_LIFE_HOURS: 168,
     REPUTATION: {
       VERIFIED_BONUS: 10,
       FALSE_REPORT_PENALTY: 20,
@@ -209,8 +208,10 @@ const CERTUS_TOXIN = {
   },
 
   // ── SPECIES‑TOXIN MATRIX (Matrix Consistency) ─────────────────────────────
+  // R1‑EL‑001: Citations added
   SPECIES_TOXIN_MATRIX: {
     // High‑risk accumulators (positive result is expected)
+    // Source: NOAA NCCOS HAB Forecasting; FDA NSSP Guide for the Control of Molluscan Shellfish
     highRisk: [
       { species: 'Butter Clam', toxin: 'PST' },
       { species: 'Blue Mussel', toxin: 'PST' },
@@ -219,6 +220,7 @@ const CERTUS_TOXIN = {
       { species: 'Geoduck', toxin: 'PST' }
     ],
     // Low‑risk accumulators (positive result is unusual, verify)
+    // Source: SEATOR 2024 PSP Report; Alaska DEC PSP data
     lowRisk: [
       { species: 'Pacific Oyster', toxin: 'PST' },
       { species: 'Scallop', toxin: 'PST' },
@@ -229,23 +231,18 @@ const CERTUS_TOXIN = {
   // ── INTERNAL STATE ────────────────────────────────────────────────────────
   _circuitBreaker: { engaged: false, correlatedFailureRate: 0, lastReset: Date.now(), backoff: 3600000, reason: null, manualResetRequired: true },
   _dependencyCircuitBreakers: {
-    redis: { open: false, failures: 0, lastFailure: null, timeout: 5000 },
     storage: { open: false, failures: 0, lastFailure: null, timeout: 10000 },
-    maps: { open: false, failures: 0, lastFailure: null, timeout: 3000 },
     supabase: { open: false, failures: 0, lastFailure: null, timeout: 8000 }
   },
   _backpressure: { tokens: 1000, lastRefill: Date.now(), rateLimit: 1000 },
   _degradedMode: false,
   _degradationReasons: [],
   _distributedStore: null,
-  _useDistributed: false,
+  _useDistributed: false,  // R1‑SA‑001: controlled by PRODUCTION.enableDistributedMode
   _storage: null,
   _supabaseClient: null,
   _auditLog: { shards: [], currentShard: 0, maxShardSize: 10000, events: [] },
   _reputationStore: new Map(),
-  _correctionStore: new Map(),
-  _progressStore: new Map(),
-  _batchReports: new Map(),
   _stripRegistry: new Map(),
   _inMemoryCounters: new Map(),
   _inMemoryStore: new Map(),
@@ -255,6 +252,14 @@ const CERTUS_TOXIN = {
     : `certus-toxin-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   _offlineSupported: false,
   _currentTheme: 'light',
+
+  // ── MODEL CALIBRATION STATE (R1‑EL‑002 restored) ──────────────────────────
+  _modelCalibration: {
+    trustScore: 0.0,
+    calibrationStatus: 'UNCALIBRATED',
+    calibrationSamples: 0,
+    lastUpdated: null
+  },
 
   // ══════════════════════════════════════════════════════════════════════════
   // UUID GENERATION
@@ -271,50 +276,36 @@ const CERTUS_TOXIN = {
   },
 
   // ══════════════════════════════════════════════════════════════════════════
-  // DISTRIBUTED COUNTER
+  // MODEL CALIBRATION (R1‑EL‑002)
   // ══════════════════════════════════════════════════════════════════════════
-  async _incrementDistributedCounter(key, ttlSeconds) {
-    if (this._distributedStore && this._useDistributed) {
-      try {
-        const count = await this._distributedStore.incr(key);
-        if (count === 1) await this._distributedStore.expire(key, ttlSeconds);
-        return count;
-      } catch (err) { this._recordDegradation('redis', err); }
+  updateModelCalibration(validatedSampleCount, newStatus) {
+    this._modelCalibration.calibrationSamples = validatedSampleCount;
+    this._modelCalibration.calibrationStatus = newStatus;
+    this._modelCalibration.lastUpdated = new Date().toISOString();
+    
+    // Update trust score according to CERTUS graduated scale
+    if (newStatus === 'UNCALIBRATED') {
+      this._modelCalibration.trustScore = 0.0;
+    } else if (newStatus === 'PARTIAL') {
+      // Linear interpolation between 0.01 and 0.59 for 1–249 samples
+      const samples = Math.min(249, Math.max(1, validatedSampleCount));
+      this._modelCalibration.trustScore = 0.01 + (samples / 249) * 0.58;
+    } else if (newStatus === 'VERIFIED') {
+      this._modelCalibration.trustScore = 1.0;
     }
-    const now = Date.now();
-    const entry = this._inMemoryCounters.get(key);
-    if (!entry || now > entry.expiresAt) {
-      this._inMemoryCounters.set(key, { count: 1, expiresAt: now + ttlSeconds * 1000 });
-      return 1;
-    }
-    entry.count += 1;
-    return entry.count;
+    
+    this._logAuditEvent({
+      type: 'MODEL_CALIBRATION_UPDATED',
+      calibrationStatus: newStatus,
+      samples: validatedSampleCount,
+      trustScore: this._modelCalibration.trustScore
+    }).catch(() => {});
+    
+    return { ...this._modelCalibration };
   },
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // BAYESIAN UPDATE
-  // ══════════════════════════════════════════════════════════════════════════
-  bayesianUpdate(prior, likelihood, falseLikelihood = null) {
-    const p = Math.max(0, Math.min(1, prior));
-    const lh = Math.max(0, Math.min(1, likelihood));
-    const flh = falseLikelihood !== null ? Math.max(0, Math.min(1, falseLikelihood)) : Math.max(0.05, (1 - lh) * 0.4);
-    const pE = lh * p + flh * (1 - p);
-    if (pE === 0) return p;
-    const posterior = (lh * p) / pE;
-    return Math.min(this.THRESHOLDS.EPISTEMIC_CEILING, Math.max(0, posterior));
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // CANARY DEPLOYMENT
-  // ══════════════════════════════════════════════════════════════════════════
-  routeToVersion(userId) {
-    const hash = this._hashCode(userId) % 100;
-    return hash < this.PRODUCTION.canaryPercentage ? this.CANARY_VERSION : this.VERSION;
-  },
-  _hashCode(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i);
-    return Math.abs(hash);
+  getModelCalibration() {
+    return { ...this._modelCalibration };
   },
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -327,26 +318,35 @@ const CERTUS_TOXIN = {
   },
 
   // ══════════════════════════════════════════════════════════════════════════
-  // AUDIT LOG
+  // AUDIT LOG (R1‑SA‑002: wrapped in try‑catch, never throws)
   // ══════════════════════════════════════════════════════════════════════════
   async _logAuditEvent(event) {
-    const auditEvent = { ...event, timestamp: Date.now(), version: this.VERSION, instanceId: this._instanceId };
-    const shard = this._auditLog.shards[this._auditLog.currentShard] || { events: [], size: 0 };
-    shard.events.push(auditEvent);
-    shard.size++;
-    this._auditLog.shards[this._auditLog.currentShard] = shard;
-    if (shard.size >= this._auditLog.maxShardSize) await this._rotateAuditShard();
-    if (this._storage && this._storage.logAudit) await this._storage.logAudit(auditEvent);
+    try {
+      const auditEvent = { ...event, timestamp: Date.now(), version: this.VERSION, instanceId: this._instanceId };
+      const shard = this._auditLog.shards[this._auditLog.currentShard] || { events: [], size: 0 };
+      shard.events.push(auditEvent);
+      shard.size++;
+      this._auditLog.shards[this._auditLog.currentShard] = shard;
+      if (shard.size >= this._auditLog.maxShardSize) await this._rotateAuditShard();
+      if (this._storage && this._storage.logAudit) await this._storage.logAudit(auditEvent);
+    } catch (err) {
+      // Silent fail — audit logging must not break scoring
+      this._recordDegradation('audit', err);
+    }
   },
   async _rotateAuditShard() {
-    const oldShard = this._auditLog.shards[this._auditLog.currentShard];
-    if (oldShard && this._storage) await this._storage.saveShard(oldShard);
-    this._auditLog.currentShard++;
-    this._auditLog.shards[this._auditLog.currentShard] = { events: [], size: 0 };
+    try {
+      const oldShard = this._auditLog.shards[this._auditLog.currentShard];
+      if (oldShard && this._storage) await this._storage.saveShard(oldShard);
+      this._auditLog.currentShard++;
+      this._auditLog.shards[this._auditLog.currentShard] = { events: [], size: 0 };
+    } catch (err) {
+      this._recordDegradation('audit_shard', err);
+    }
   },
 
   // ══════════════════════════════════════════════════════════════════════════
-  // CIRCUIT BREAKER
+  // CIRCUIT BREAKER (R1‑SA‑002: now used for storage)
   // ══════════════════════════════════════════════════════════════════════════
   async _callWithCircuitBreaker(dependency, fn, fallback) {
     const breaker = this._dependencyCircuitBreakers[dependency];
@@ -369,167 +369,49 @@ const CERTUS_TOXIN = {
   },
 
   // ══════════════════════════════════════════════════════════════════════════
-  // BACKPRESSURE
+  // STORAGE INIT (R1‑SA‑002: wrapped, never throws)
   // ══════════════════════════════════════════════════════════════════════════
-  async _acquireBackpressureToken(tokens = 1, _maxRetries = 50) {
-    const POLL_INTERVAL_MS = 100;
-    let retries = 0;
-    while (retries < _maxRetries) {
-      this._refillTokens();
-      if (this._backpressure.tokens >= tokens) { this._backpressure.tokens -= tokens; return true; }
-      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
-      retries++;
-    }
-    const err = new Error('BACKPRESSURE_EXHAUSTED');
-    err.code = 'BACKPRESSURE_EXHAUSTED';
-    throw err;
-  },
-  _refillTokens() {
-    const now = Date.now();
-    const elapsed = now - this._backpressure.lastRefill;
-    const newTokens = elapsed * (this._backpressure.rateLimit / 1000);
-    this._backpressure.tokens = Math.min(this._backpressure.rateLimit, this._backpressure.tokens + newTokens);
-    this._backpressure.lastRefill = now;
-  },
-  _inMemoryStoreSet(key, value) {
-    if (this._inMemoryStore.size >= this._IN_MEMORY_STORE_MAX_SIZE) {
-      const oldest = this._inMemoryStore.keys().next().value;
-      this._inMemoryStore.delete(oldest);
-    }
-    this._inMemoryStore.set(key, value);
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // EVIDENCE INDEPENDENCE
-  // ══════════════════════════════════════════════════════════════════════════
-  _estimateCombinedEvidenceDelta(evidences) {
-    let likelihood = 0.5;
-    if (evidences.includes('strip')) likelihood += this.EVIDENCE_WEIGHTS.STRIP.likelihood - 0.5;
-    if (evidences.includes('witness')) likelihood += this.EVIDENCE_WEIGHTS.WITNESS.likelihood - 0.5;
-    if (evidences.includes('lab')) likelihood += this.EVIDENCE_WEIGHTS.LAB.likelihood - 0.5;
-    return Math.min(0.95, likelihood);
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // EVIDENCE FRESHNESS
-  // ══════════════════════════════════════════════════════════════════════════
-  _getEvidenceFreshness(timestamp) {
-    const hoursElapsed = (Date.now() - new Date(timestamp).getTime()) / 3600000;
-    return Math.max(0, 1 - (hoursElapsed / this.THRESHOLDS.EVIDENCE_HALF_LIFE_HOURS));
-  },
-  _getEvidenceWeight(evidence, timestamp) {
-    return evidence.weight * this._getEvidenceFreshness(timestamp);
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // SOURCE CREDIBILITY
-  // ══════════════════════════════════════════════════════════════════════════
-  _getCredibilityMultiplier(source) {
-    return this.CREDIBILITY_SCORES[source] || 0.5;
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // ADVERSARIAL DETECTION
-  // ══════════════════════════════════════════════════════════════════════════
-  async _detectAdversarialPattern(evidence, reportHistory) {
-    const now = Date.now();
-    const recentAppeals = reportHistory.filter(a => a.timestamp > now - 86400000);
-    if (recentAppeals.length > 3) {
-      return { adversarial: true, reason: 'Multiple contradictory appeals in short timeframe', action: 'require_human_review' };
-    }
-    const stripHashes = evidence.strips?.map(s => s.hash) || [];
-    const duplicateStrips = await this._findDuplicateStrips(stripHashes);
-    if (duplicateStrips.length > 0) {
-      return { adversarial: true, reason: 'Duplicate strip images detected', action: 'flag_for_investigation' };
-    }
-    return { adversarial: false };
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // REPUTATION
-  // ══════════════════════════════════════════════════════════════════════════
-  _updateReputation(reporterId, reportOutcome) {
-    if (!reporterId) return { score: 0, banned: false };
-    let reputation = this._reputationStore.get(reporterId) || { score: 0, verified: 0, false: 0, banned: false };
-    if (reputation.banned) return reputation;
-    if (reportOutcome === 'VERIFIED') { reputation.score += this.THRESHOLDS.REPUTATION.VERIFIED_BONUS; reputation.verified++; }
-    else if (reportOutcome === 'FALSE') { reputation.score -= this.THRESHOLDS.REPUTATION.FALSE_REPORT_PENALTY; reputation.false++; }
-    if (reputation.score < this.THRESHOLDS.REPUTATION.BAN_THRESHOLD) { reputation.banned = true; reputation.ban_reason = 'Multiple false reports'; }
-    this._reputationStore.set(reporterId, reputation);
-    return reputation;
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // LOCATION ANONYMIZATION
-  // ══════════════════════════════════════════════════════════════════════════
-  _anonymizeLocation(coords, locationType) {
-    if (this.SENSITIVE_LOCATION_TYPES.includes(locationType)) {
-      return { lat: Math.round(coords.lat * 1000) / 1000, lng: Math.round(coords.lng * 1000) / 1000, anonymized: true };
-    }
-    return { ...coords, anonymized: false };
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // CONSENT
-  // ══════════════════════════════════════════════════════════════════════════
-  getConsentForm() {
-    return {
-      required: this.CONSENT_OPTIONS.food_safety,
-      optional: Object.entries(this.CONSENT_OPTIONS).filter(([_, opt]) => !opt.required).map(([key, opt]) => ({ purpose: key, explanation: opt.explanation, default: opt.default }))
-    };
-  },
-  getDataSharingDisclosure() {
-    return {
-      recipients: Object.entries(this.DATA_RECIPIENTS).map(([key, r]) => ({ ...r, can_opt_out: r.opt_out })),
-      total_recipients: Object.keys(this.DATA_RECIPIENTS).length,
-      last_updated: new Date().toISOString()
-    };
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // PERCEPTUAL HASH
-  // ══════════════════════════════════════════════════════════════════════════
-  async _generatePerceptualHash(imageDataUrl) {
-    if (!imageDataUrl) return null;
-    if (typeof document !== 'undefined' && typeof HTMLCanvasElement !== 'undefined') {
-      try {
-        const img = new Image();
-        await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = imageDataUrl; });
-        const canvas = document.createElement('canvas'); canvas.width = 9; canvas.height = 8;
-        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, 9, 8);
-        const data = ctx.getImageData(0, 0, 9, 8).data;
-        const luma = [];
-        for (let i = 0; i < data.length; i += 4) luma.push(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
-        let bits = '';
-        for (let row = 0; row < 8; row++) for (let col = 0; col < 8; col++) bits += luma[row*9+col] > luma[row*9+col+1] ? '1' : '0';
-        return bits;
-      } catch (e) {}
-    }
-    let h = 0x811c9dc5;
-    for (let i = 0; i < imageDataUrl.length; i++) { h ^= imageDataUrl.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
-    return `fnv:${h.toString(16).padStart(8, '0')}`;
-  },
-  _calculateHashSimilarity(h1, h2) {
-    if (!h1 || !h2) return 0;
-    if (h1 === h2) return 1.0;
-    if (/^[01]{64}$/.test(h1) && /^[01]{64}$/.test(h2)) {
-      let matching = 0; for (let i=0;i<64;i++) if (h1[i]===h2[i]) matching++; return matching/64;
-    }
-    let diff = 0; for (let i=0;i<Math.min(h1.length,h2.length);i++) if (h1[i]!==h2[i]) diff++;
-    diff += Math.abs(h1.length - h2.length);
-    return Math.max(0, 1 - diff / Math.max(h1.length, h2.length));
-  },
-  async _findDuplicateStrips(hashes, threshold = 0.95) {
-    if (!hashes.length) return [];
-    const duplicates = [];
-    for (const hash of hashes) {
-      for (const [existing, entry] of this._stripRegistry.entries()) {
-        if (this._calculateHashSimilarity(hash, existing) >= threshold) {
-          duplicates.push({ hash, matched_with: existing, original: entry.report_id });
-        }
+  async _initializeStorage() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        this._storage = {
+          type: 'localstorage',
+          get: (key) => { try { return JSON.parse(localStorage.getItem(`certus_toxin_${key}`)); } catch { return null; } },
+          set: (key, val) => { try { localStorage.setItem(`certus_toxin_${key}`, JSON.stringify(val)); } catch {} },
+          logAudit: async (e) => { const a = this._storage.get('audit') || []; a.push(e); this._storage.set('audit', a); },
+          saveShard: async (s) => { const sh = this._storage.get('shards') || []; sh.push(s); this._storage.set('shards', sh); }
+        };
+        return this._storage;
       }
+    } catch (err) {
+      this._recordDegradation('storage_init', err);
     }
-    return duplicates;
+    // Memory fallback
+    this._storage = {
+      type: 'memory',
+      memory: new Map(),
+      get: (k) => this._storage.memory.get(k),
+      set: (k, v) => this._storage.memory.set(k, v),
+      logAudit: async () => {},
+      saveShard: async () => {}
+    };
+    return this._storage;
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ECF CONTRIBUTION (R1‑EL‑003 restored)
+  // ══════════════════════════════════════════════════════════════════════════
+  computeECFContribution(findings, dimension) {
+    if (!findings || findings.length === 0) return 0;
+    const ECF_WEIGHTS = { 'D': 0.00, 'R': 0.05, 'S': 0.10, '?': 0.15 };
+    const dimensionFindings = findings.filter(f => f.dimension === dimension);
+    if (dimensionFindings.length === 0) return 0;
+    let total = 0;
+    dimensionFindings.forEach(f => {
+      const ecf = f.ecf || (f.tags ? f.tags.ecf : '?');
+      total += ECF_WEIGHTS[ecf] || 0.10;
+    });
+    return Math.min(0.30, total / dimensionFindings.length);
   },
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -537,6 +419,8 @@ const CERTUS_TOXIN = {
   // ══════════════════════════════════════════════════════════════════════════
   computeSCS(report, isRealModel = false) {
     const result = { value: 0.50, measurement_class: 'INFERENTIAL', evaluable: true, gated: false, um_contribution: 0, note: '' };
+    const trustScore = this._modelCalibration.trustScore;
+    
     if (!report.stripPhoto) {
       result.value = null; result.evaluable = false; result.measurement_class = 'NOT_EVALUABLE';
       result.um_contribution = 0.25; result.note = 'No strip photo submitted.';
@@ -548,15 +432,23 @@ const CERTUS_TOXIN = {
       return result;
     }
     if (report.stripAiConf < 0.60) {
-      result.value = 0.50; result.measurement_class = isRealModel ? 'EVALUATIVE_GATED' : 'INFERENTIAL';
-      result.gated = true; result.um_contribution = isRealModel ? 0.10 : 0.30;
+      result.value = 0.50;
+      result.measurement_class = isRealModel ? 'EVALUATIVE_GATED' : 'INFERENTIAL';
+      result.gated = true;
+      result.um_contribution = isRealModel ? 0.10 : 0.30;
       result.note = `AI confidence below 60% — SCS gated to 0.50.`;
       return result;
     }
     result.value = Math.max(0, Math.min(1, report.stripAiScore));
     result.gated = false;
-    result.measurement_class = isRealModel ? 'EVALUATIVE' : 'INFERENTIAL';
-    result.um_contribution = isRealModel ? 0 : 0.20;
+    
+    if (isRealModel && trustScore >= 0.60) {
+      result.measurement_class = 'EVALUATIVE';
+      result.um_contribution = Math.max(0, 0.20 * (1 - trustScore));
+    } else {
+      result.measurement_class = 'INFERENTIAL';
+      result.um_contribution = 0.20;
+    }
     result.note = `AI analysis: score ${report.stripAiScore.toFixed(3)}, confidence ${(report.stripAiConf*100).toFixed(0)}%.`;
     return result;
   },
@@ -663,17 +555,29 @@ const CERTUS_TOXIN = {
   },
 
   // ══════════════════════════════════════════════════════════════════════════
-  // UNCERTAINTY MASS
+  // UNCERTAINTY MASS (R1‑EL‑003: ECF contributions integrated)
   // ══════════════════════════════════════════════════════════════════════════
-  computeUM(scs, cor, tfr, mcs, correlatedFailure) {
-    const penalties = [scs.um_contribution, cor.um_contribution, tfr.um_contribution, mcs.um_contribution].filter(p => p != null);
+  computeUM(scs, cor, tfr, mcs, correlatedFailure, ecfContributions = {}) {
+    const penalties = [
+      scs.um_contribution + (ecfContributions.SCS || 0),
+      cor.um_contribution + (ecfContributions.COR || 0),
+      tfr.um_contribution + (ecfContributions.TFR || 0),
+      mcs.um_contribution + (ecfContributions.MCS || 0)
+    ].filter(p => p != null);
+    
     let um = 1 - penalties.reduce((acc, p) => acc * (1 - Math.max(0, p)), 1);
     if (correlatedFailure.correlated) um = Math.min(1, um + correlatedFailure.penalty);
+    
+    // Baseline penalty for provisional matrix (R1‑EL‑003)
+    um = Math.min(1, um + 0.05);
+    
     um = parseFloat(Math.min(1, Math.max(0, um)).toFixed(3));
+    
     let validity_status;
     if (um < this.THRESHOLDS.UM_VALID) validity_status = 'VALID';
     else if (um < this.THRESHOLDS.UM_DEGRADED) validity_status = 'DEGRADED';
     else validity_status = 'SUSPENDED';
+    
     return { mass: um, validity_status };
   },
 
@@ -706,21 +610,72 @@ const CERTUS_TOXIN = {
   },
 
   // ══════════════════════════════════════════════════════════════════════════
-  // STORAGE INIT
+  // PERCEPTUAL HASH & DUPLICATE DETECTION (R1‑SA‑004: registry populated)
   // ══════════════════════════════════════════════════════════════════════════
-  async _initializeStorage() {
-    if (typeof localStorage !== 'undefined') {
-      this._storage = {
-        type: 'localstorage',
-        get: (key) => { try { return JSON.parse(localStorage.getItem(`certus_toxin_${key}`)); } catch { return null; } },
-        set: (key, val) => { try { localStorage.setItem(`certus_toxin_${key}`, JSON.stringify(val)); } catch {} },
-        logAudit: async (e) => { const a = this._storage.get('audit') || []; a.push(e); this._storage.set('audit', a); },
-        saveShard: async (s) => { const sh = this._storage.get('shards') || []; sh.push(s); this._storage.set('shards', sh); }
-      };
-      return this._storage;
+  async _generatePerceptualHash(imageDataUrl) {
+    if (!imageDataUrl) return null;
+    if (typeof document !== 'undefined' && typeof HTMLCanvasElement !== 'undefined') {
+      try {
+        const img = new Image();
+        await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = imageDataUrl; });
+        const canvas = document.createElement('canvas'); canvas.width = 9; canvas.height = 8;
+        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, 9, 8);
+        const data = ctx.getImageData(0, 0, 9, 8).data;
+        const luma = [];
+        for (let i = 0; i < data.length; i += 4) luma.push(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]);
+        let bits = '';
+        for (let row = 0; row < 8; row++) for (let col = 0; col < 8; col++) bits += luma[row*9+col] > luma[row*9+col+1] ? '1' : '0';
+        return bits;
+      } catch (e) {}
     }
-    this._storage = { type: 'memory', memory: new Map(), get: (k) => this._storage.memory.get(k), set: (k,v) => this._storage.memory.set(k,v), logAudit: async (e) => {}, saveShard: async (s) => {} };
-    return this._storage;
+    let h = 0x811c9dc5;
+    for (let i = 0; i < imageDataUrl.length; i++) { h ^= imageDataUrl.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
+    return `fnv:${h.toString(16).padStart(8, '0')}`;
+  },
+  _calculateHashSimilarity(h1, h2) {
+    if (!h1 || !h2) return 0;
+    if (h1 === h2) return 1.0;
+    if (/^[01]{64}$/.test(h1) && /^[01]{64}$/.test(h2)) {
+      let matching = 0; for (let i=0;i<64;i++) if (h1[i]===h2[i]) matching++; return matching/64;
+    }
+    let diff = 0; for (let i=0;i<Math.min(h1.length,h2.length);i++) if (h1[i]!==h2[i]) diff++;
+    diff += Math.abs(h1.length - h2.length);
+    return Math.max(0, 1 - diff / Math.max(h1.length, h2.length));
+  },
+  async _registerStrip(hash, reportId) {
+    if (!hash) return;
+    const entry = { hash, report_id: reportId, timestamp: Date.now() };
+    this._stripRegistry.set(hash, entry);
+    
+    // Persist to storage
+    if (this._storage && this._storage.set) {
+      try {
+        const registry = Array.from(this._stripRegistry.values());
+        this._storage.set('strip_registry', registry);
+      } catch (err) {}
+    }
+  },
+  async _loadStripRegistry() {
+    if (this._storage && this._storage.get) {
+      try {
+        const saved = this._storage.get('strip_registry');
+        if (Array.isArray(saved)) {
+          saved.forEach(entry => this._stripRegistry.set(entry.hash, entry));
+        }
+      } catch (err) {}
+    }
+  },
+  async _findDuplicateStrips(hashes, threshold = 0.95) {
+    if (!hashes.length) return [];
+    const duplicates = [];
+    for (const hash of hashes) {
+      for (const [existing, entry] of this._stripRegistry.entries()) {
+        if (this._calculateHashSimilarity(hash, existing) >= threshold) {
+          duplicates.push({ hash, matched_with: existing, original: entry.report_id });
+        }
+      }
+    }
+    return duplicates;
   },
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -729,20 +684,38 @@ const CERTUS_TOXIN = {
   async score(report, nearbyTests = [], isRealModel = false, context = {}) {
     const timestamp = report.timestamp || new Date().toISOString();
     const reportUuid = report.uuid || this._generateUUID();
-    await this._acquireBackpressureToken();
-    const version = this.routeToVersion(reportUuid);
-
-    const reputation = this._updateReputation(report.reporter_id, 'PENDING');
-    if (reputation.banned) {
-      await this._logAuditEvent({ type: 'BANNED_REPORTER_BLOCKED', report_id: reportUuid });
-      return { usable: false, error: 'REPORTER_BANNED' };
+    
+    // R1‑SA‑001: backpressure only if distributed mode enabled
+    if (this.PRODUCTION.enableDistributedMode) {
+      await this._acquireBackpressureToken();
     }
+    
+    const version = this.routeToVersion ? this.routeToVersion(reportUuid) : this.VERSION;
+
+    // Reputation (if enabled)
+    let reputation = { score: 0, banned: false };
+    if (this.PRODUCTION.enableAppeals) {
+      reputation = this._updateReputation(report.reporter_id, 'PENDING');
+      if (reputation.banned) {
+        await this._logAuditEvent({ type: 'BANNED_REPORTER_BLOCKED', report_id: reportUuid });
+        return { usable: false, error: 'REPORTER_BANNED' };
+      }
+    }
+    
     await this._logAuditEvent({ type: 'TEST_SCORED', report_id: reportUuid, version });
 
     const SCS = this.computeSCS(report, isRealModel);
     const COR = this.computeCOR(nearbyTests, report.testResult, reportUuid);
     const TFR = this.computeTFR(report.harvestTime);
     const MCS = this.computeMCS(report.species, report.toxinType);
+
+    // R1‑SA‑004: register strip for duplicate detection
+    if (report.stripPhoto && SCS.evaluable) {
+      const hash = await this._generatePerceptualHash(report.stripPhoto);
+      if (hash) {
+        await this._registerStrip(hash, reportUuid);
+      }
+    }
 
     const rawScores = { SCS: SCS.evaluable ? SCS.value : null, COR: COR.evaluable ? COR.value : null, TFR: TFR.value, MCS: MCS.value };
     const activeDimensions = ['SCS', 'COR', 'TFR', 'MCS'].filter(d => rawScores[d] !== null);
@@ -751,7 +724,16 @@ const CERTUS_TOXIN = {
     const tci = parseFloat(Math.max(0, Math.min(1, tci_raw)).toFixed(3));
 
     const correlatedFailure = this.detectCorrelatedFailures(SCS, COR);
-    const um = this.computeUM(SCS, COR, TFR, MCS, correlatedFailure);
+    
+    // R1‑EL‑003: compute ECF contributions
+    const ecfContributions = {
+      SCS: this.computeECFContribution(report.findings || [], 'SCS'),
+      COR: this.computeECFContribution(report.findings || [], 'COR'),
+      TFR: this.computeECFContribution(report.findings || [], 'TFR'),
+      MCS: this.computeECFContribution(report.findings || [], 'MCS')
+    };
+    
+    const um = this.computeUM(SCS, COR, TFR, MCS, correlatedFailure, ecfContributions);
 
     const requiresHumanReview = um.validity_status === 'SUSPENDED';
     const hasValidHumanReview = context.human_review_proof?.reviewer_id;
@@ -767,6 +749,16 @@ const CERTUS_TOXIN = {
     const { strengths, weaknesses } = this.getStrengths(SCS, COR, TFR, MCS);
     const umBreakdown = this.getUMBreakdown(SCS, COR, TFR, MCS);
 
+    // R1‑SA‑004: check for duplicate strips
+    let duplicateFlag = false;
+    if (report.stripPhoto && SCS.evaluable) {
+      const hash = await this._generatePerceptualHash(report.stripPhoto);
+      if (hash) {
+        const duplicates = await this._findDuplicateStrips([hash]);
+        duplicateFlag = duplicates.length > 0;
+      }
+    }
+
     return {
       tci, tier, usable: um.validity_status !== 'SUSPENDED' || hasValidHumanReview, version,
       tci_scs: SCS.value, tci_cor: COR.value, tci_tfr: TFR.value, tci_mcs: MCS.value,
@@ -774,17 +766,25 @@ const CERTUS_TOXIN = {
       tci_um_breakdown: umBreakdown,
       tci_strengths: strengths, tci_weaknesses: weaknesses,
       tci_bottleneck: { dimension: bottleneck_dim, value: dims[bottleneck_dim] },
-      tci_flags: { scs_gated: SCS.gated, cor_contradiction: COR.signal_type === 'CONTRADICTION', mcs_flagged: MCS.flagged },
+      tci_flags: {
+        scs_gated: SCS.gated,
+        cor_contradiction: COR.signal_type === 'CONTRADICTION',
+        mcs_flagged: MCS.flagged,
+        duplicate_strip: duplicateFlag
+      },
       tci_hours_since_harvest: TFR.hours_elapsed,
       tci_freshness_status: TFR.freshness_status,
       tci_reporter_reputation: reputation,
+      model_calibration: this.getModelCalibration(),
       constitutional_status: {
         prohibited_uses: ['discriminatory closure', 'commercial exploitation without consent'],
         prohibited_uses_enforcement: 'CALLER_RESPONSIBILITY',
         consent_gate: 'CALLER_RESPONSIBILITY'
       },
       location: this._anonymizeLocation(report.coordinates || { lat: 0, lng: 0 }, report.locationType),
-      appeal_status: { appeals_remaining: this.THRESHOLDS.MAX_APPEALS - (report.appeal_count || 0) }
+      appeal_status: this.PRODUCTION.enableAppeals ? {
+        appeals_remaining: this.THRESHOLDS.MAX_APPEALS - (report.appeal_count || 0)
+      } : { appeals_remaining: 0, disabled: true }
     };
   },
 
@@ -792,9 +792,16 @@ const CERTUS_TOXIN = {
   // INITIALIZATION
   // ══════════════════════════════════════════════════════════════════════════
   async initialize() {
-    await this._initializeStorage();
+    await this._callWithCircuitBreaker('storage', 
+      () => this._initializeStorage(),
+      () => { this._storage = { type: 'memory', get:()=>null, set:()=>{}, logAudit:async()=>{}, saveShard:async()=>{} }; }
+    );
+    
+    // Load strip registry from storage
+    await this._loadStripRegistry();
+    
     await this._logAuditEvent({ type: 'ENGINE_INITIALIZED', version: this.VERSION });
-    return { success: true, version: this.VERSION };
+    return { success: true, version: this.VERSION, calibration: this.getModelCalibration() };
   },
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -805,6 +812,57 @@ const CERTUS_TOXIN = {
   },
   tierColor(tier) {
     return this.MARKER_STYLES[tier]?.color || '#888';
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // RETAINED BUT GATED FUNCTIONS (only used if PRODUCTION flags are true)
+  // ══════════════════════════════════════════════════════════════════════════
+  async _acquireBackpressureToken(tokens = 1, _maxRetries = 50) {
+    if (!this.PRODUCTION.enableDistributedMode) return true;
+    const POLL_INTERVAL_MS = 100;
+    let retries = 0;
+    while (retries < _maxRetries) {
+      this._refillTokens();
+      if (this._backpressure.tokens >= tokens) { this._backpressure.tokens -= tokens; return true; }
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+      retries++;
+    }
+    const err = new Error('BACKPRESSURE_EXHAUSTED');
+    err.code = 'BACKPRESSURE_EXHAUSTED';
+    throw err;
+  },
+  _refillTokens() {
+    const now = Date.now();
+    const elapsed = now - this._backpressure.lastRefill;
+    const newTokens = elapsed * (this._backpressure.rateLimit / 1000);
+    this._backpressure.tokens = Math.min(this._backpressure.rateLimit, this._backpressure.tokens + newTokens);
+    this._backpressure.lastRefill = now;
+  },
+  _updateReputation(reporterId, reportOutcome) {
+    if (!this.PRODUCTION.enableAppeals) return { score: 0, banned: false };
+    if (!reporterId) return { score: 0, banned: false };
+    let reputation = this._reputationStore.get(reporterId) || { score: 0, verified: 0, false: 0, banned: false };
+    if (reputation.banned) return reputation;
+    if (reportOutcome === 'VERIFIED') { reputation.score += this.THRESHOLDS.REPUTATION.VERIFIED_BONUS; reputation.verified++; }
+    else if (reportOutcome === 'FALSE') { reputation.score -= this.THRESHOLDS.REPUTATION.FALSE_REPORT_PENALTY; reputation.false++; }
+    if (reputation.score < this.THRESHOLDS.REPUTATION.BAN_THRESHOLD) { reputation.banned = true; reputation.ban_reason = 'Multiple false reports'; }
+    this._reputationStore.set(reporterId, reputation);
+    return reputation;
+  },
+  routeToVersion(userId) {
+    const hash = this._hashCode(userId) % 100;
+    return hash < this.PRODUCTION.canaryPercentage ? this.CANARY_VERSION : this.VERSION;
+  },
+  _hashCode(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    return Math.abs(hash);
+  },
+  _anonymizeLocation(coords, locationType) {
+    if (this.SENSITIVE_LOCATION_TYPES.includes(locationType)) {
+      return { lat: Math.round(coords.lat * 1000) / 1000, lng: Math.round(coords.lng * 1000) / 1000, anonymized: true };
+    }
+    return { ...coords, anonymized: false };
   }
 };
 
