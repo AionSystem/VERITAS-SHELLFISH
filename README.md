@@ -1,6 +1,7 @@
 # VERITAS‑SHELLFISH — HAB Toxin Detection Platform
 
 <!-- STATUS · VERSION · COMPLIANCE -->
+[![DOI](https://zenodo.org/badge/1207402357.svg)](https://doi.org/10.5281/zenodo.19520897)
 [![Status](https://img.shields.io/badge/STATUS-Simulation_%7C_NOAA_LOI-1B3B6F?style=flat-square)](https://github.com/AionSystem/VERITAS-SHELLFISH)
 [![Version](https://img.shields.io/badge/version-v1.0.0-orange)](#)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen)](#)
