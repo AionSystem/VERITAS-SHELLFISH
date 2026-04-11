@@ -15,14 +15,12 @@ const ASSETS_TO_CACHE = [
   '/certus-toxin-v1.1.js',
   '/ai-analysis.js',
   '/manifest.json',
-  // Leaflet — loaded from CDN; cached here for offline map rendering
+  // Leaflet — loaded from CDN; cached for offline map rendering
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
-// ============================================================
 // Supabase configuration — VERITAS‑SHELLFISH
-// ============================================================
 const SUPABASE_URL = 'https://spqqhvaqjwxcrdbujwna.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwcXFodmFxand4Y3JkYnVqd25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTY2NDIsImV4cCI6MjA5MDI5MjY0Mn0.1ibM3TwGS82NOAhpzZFbvdCzdveReqaM9sMIVDTO3Tg';
 
@@ -126,7 +124,6 @@ async function syncQueuedTests() {
     
     for (const test of unsynced) {
       try {
-        // Payload matching VERITAS‑SHELLFISH Supabase schema
         const payload = {
           uuid: test.uuid,
           timestamp: test.timestamp,
