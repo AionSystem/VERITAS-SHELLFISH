@@ -8,12 +8,7 @@ const AI_ANALYSIS_SHELLFISH = {
   API_URL: 'https://veritas-shellfish.vercel.app/api/analyze-strip',
   
   async analyzeStrip(imageDataUrl, toxinType = null) {
-    // ... rest of function unchanged
-  },
-  
-  // ... rest of module unchanged
-};
-  
+     
   /**
    * Analyze a lateral flow assay (LFA) strip photo by calling your Vercel backend.
    * @param {string} imageDataUrl - Base64 image data (e.g., from canvas or file input)
