@@ -1000,6 +1000,61 @@ async function stampWithSTP() {
   }
 }
 
+ // ==================== SUPABASE SYNC (Updated for Shellfish) ====================
+async function syncToSupabase(test) {
+  if (!CONFIG.USE_SUPABASE) return;
+  
+  try {
+    const payload = {
+      uuid: test.uuid,
+      timestamp: test.timestamp,
+      lat: test.lat,
+      lng: test.lng,
+      species: test.species,
+      toxin_type: test.toxinType,
+      test_result: test.testResult,
+      lot_number: test.lotNumber,
+      harvest_time: test.harvestTime,
+      tci: test.confidenceScore,
+      tci_tier: test.confidenceTier,
+      tci_scs: test.signalConfidence,
+      tci_cor: test.corroboration,
+      tci_tfr: test.freshness,
+      tci_mcs: test.matrixConsistency,
+      tci_um: test.uncertaintyMass,
+      tci_validity: test.validityStatus,
+      loc_mode: test.locMode,
+      text_loc: test.textLocation || '',
+      strip_ai_score: test.photoAiScore,
+      strip_ai_conf: test.photoAiConf,
+      synced: true
+    };
+    
+    // UPDATED: Use shellfish_tests table (new table in same Supabase project)
+    const response = await fetchWithTimeout(
+      `${CONFIG.SUPABASE_URL}/rest/v1/shellfish_tests`,
+      {
+        method: 'POST',
+        headers: {
+          'apikey': CONFIG.SUPABASE_ANON,
+          'Authorization': `Bearer ${CONFIG.SUPABASE_ANON}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+    
+    if (response.ok) {
+      console.log(`[Supabase] Test ${test.uuid} synced to shellfish_tests`);
+    } else {
+      console.warn('[Supabase] Sync failed:', response.status);
+    }
+  } catch (err) {
+    console.warn('[Supabase] Sync error:', err.message);
+  }
+} 
+  
 // ==================== ALERT ====================
 function sendHarvestAlert(){ toast('🚨 Unsafe harvest alert sent to regulators (simulation)'); }
 
