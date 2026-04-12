@@ -1326,6 +1326,7 @@ async function submitReport() {
       report.matrixConsistency = tciResult.tci_mcs;
       report.uncertaintyMass = tciResult.tci_uncertainty_mass;
       report.validityStatus = tciResult.tci_validity_status;
+      report.freshness = freshness;
     } else {
       const baseScore = 0.65 + Math.random() * 0.30;
       const tci = baseScore * (0.7 + 0.3 * freshness);
