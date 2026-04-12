@@ -1093,6 +1093,51 @@ if (cursor && window.matchMedia('(hover: hover)').matches) {
   cursor.style.display = 'none';
 }
 
+// Fetch with timeout
+async function fetchWithTimeout(url, options = {}, timeout = 15000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(id);
+    return response;
+  } catch (err) {
+    clearTimeout(id);
+    throw err;
+  }
+}
+
+// Compute SHA-256 hash
+async function computeHash(str) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// STP seal display state
+let currentSTPSeal = null;
+
+function displaySTPSeal(seal) {
+  const displayDiv = document.getElementById('stpSealDisplay');
+  const contentDiv = displayDiv.querySelector('div') || displayDiv;
+  displayDiv.style.display = 'block';
+  
+  const issueLink = seal.issue_url 
+    ? `<a href="${seal.issue_url}" target="_blank" style="color:var(--cyan-accent);">View on GitHub</a>`
+    : '<span style="color:#ff4d4d;">Not uploaded</span>';
+  
+  contentDiv.innerHTML = `
+    <div><strong>Seal:</strong> ${seal.seal ? seal.seal.substring(0, 16) + '...' : '—'}</div>
+    <div><strong>Dataset SHA-256:</strong> <code>${seal.datasetHash}</code></div>
+    <div><strong>Tests sealed:</strong> ${seal.reportsCount}</div>
+    <div><strong>GitHub Issue:</strong> ${issueLink}</div>
+    ${seal.local ? '<div style="color:#ffc947;">⚠️ Local seal only</div>' : ''}
+  `;
+}
+  
 // ==================== PHOTO & AI (simulated) ====================
 function handlePhoto(input) {
   const file = input.files[0]; if (!file) return;
