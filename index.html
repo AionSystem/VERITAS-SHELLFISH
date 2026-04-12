@@ -1039,6 +1039,97 @@ function buildLangSelector() {
   setLanguage('en');
 }
 
+// ==================== NOAA BRANDED SYMBOL FIELD ====================
+(function() {
+  const canvas = document.getElementById('hero-canvas');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  let width, height;
+  let symbols = [];
+  let mouse = { x: null, y: null, radius: 150 };
+  
+  const SYMBOL_SET = [
+    'NOAA', 'NCCOS', 'HAB', 'PST', 'ASP', 'DSP', 
+    'TCI', 'STP', 'LFA', 'TOXIN', 'SHELLFISH',
+    '◈', '◆', '○', '●', '◉', '⁂', '∄'
+  ];
+  
+  const COLORS = ['#1B3B6F', '#4A7B9D', '#00D4FF', '#FFFFFF', '#7a9aba'];
+  
+  function resizeCanvas() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+    initSymbols();
+  }
+  
+  function initSymbols() {
+    const count = Math.floor(width * height / 8000);
+    symbols = [];
+    for (let i = 0; i < count; i++) {
+      symbols.push({
+        symbol: SYMBOL_SET[Math.floor(Math.random() * SYMBOL_SET.length)],
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.15,
+        vy: (Math.random() - 0.5) * 0.15,
+        size: Math.random() * 18 + 10,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        opacity: 0.12 + Math.random() * 0.15
+      });
+    }
+  }
+  
+  function drawSymbols() {
+    ctx.clearRect(0, 0, width, height);
+    symbols.forEach(s => {
+      s.x += s.vx;
+      s.y += s.vy;
+      if (s.x < -100) s.x = width + 100;
+      if (s.x > width + 100) s.x = -100;
+      if (s.y < -100) s.y = height + 100;
+      if (s.y > height + 100) s.y = -100;
+      if (mouse.x && mouse.y) {
+        const dx = s.x - mouse.x;
+        const dy = s.y - mouse.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < mouse.radius) {
+          const angle = Math.atan2(dy, dx);
+          const force = (mouse.radius - dist) / mouse.radius * 1.5;
+          s.x += Math.cos(angle) * force;
+          s.y += Math.sin(angle) * force;
+        }
+      }
+      ctx.font = `${s.size}px 'JetBrains Mono', 'Share Tech Mono', monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = s.color === '#00D4FF' ? '#00D4FF' : '#1B3B6F';
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = s.color;
+      ctx.globalAlpha = s.opacity;
+      ctx.fillText(s.symbol, s.x, s.y);
+    });
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1.0;
+    requestAnimationFrame(drawSymbols);
+  }
+  
+  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+  window.addEventListener('mouseleave', () => {
+    mouse.x = null;
+    mouse.y = null;
+  });
+  
+  resizeCanvas();
+  drawSymbols();
+})();
+
 // ==================== CONFIG & STATE ====================
 const CONFIG = {
   SUPABASE_URL: 'https://spqqhvaqjwxcrdbujwna.supabase.co',
@@ -1050,8 +1141,8 @@ const CONFIG = {
   MAP_ZOOM: 4,
   FUZZY_RADIUS: 100,
   TCI_THRESHOLDS: { HIGH: 0.70, WATCH: 0.40 },
-  USE_MOCK_AI: true, // LOI DEMO: set to false when Vercel backend is fully live
-  USE_MOCK_STP: true // LOI DEMO: set to false when GitHub token is configured
+  USE_MOCK_AI: true,
+  USE_MOCK_STP: true
 };
 
 const STATE = {
@@ -1078,6 +1169,31 @@ if (cursor && window.matchMedia('(hover: hover)').matches) {
 } else if (cursor) {
   cursor.style.display = 'none';
 }
+
+// ==================== MOBILE NAVIGATION ====================
+(function() {
+  const hamburger = document.getElementById('nav-hamburger');
+  const mobileNav = document.getElementById('mobile-nav');
+  if (!hamburger || !mobileNav) return;
+  hamburger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    hamburger.classList.toggle('open');
+    mobileNav.classList.toggle('open');
+  });
+  mobileNav.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      hamburger.classList.remove('open');
+      mobileNav.classList.remove('open');
+    });
+  });
+  document.addEventListener('click', (e) => {
+    if (!mobileNav.contains(e.target) && !hamburger.contains(e.target)) {
+      hamburger.classList.remove('open');
+      mobileNav.classList.remove('open');
+    }
+  });
+  mobileNav.addEventListener('click', (e) => e.stopPropagation());
+})();
 
 // ==================== UTILITIES ====================
 function generateUUID(){ return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16);}); }
@@ -1152,16 +1268,11 @@ async function runAiAnalysis() {
       const intensityMap = { 'strong_positive': 0.92, 'positive': 0.68, 'trace': 0.35, 'negative': 0.12 };
       const scoreMap = { 'strong_positive': 0.90, 'positive': 0.72, 'trace': 0.45, 'negative': 0.18 };
       result = {
-        success: true,
-        test_result: selected,
-        internal_result: selected,
-        test_line_intensity: intensityMap[selected],
-        control_line_intensity: 0.78,
-        score: scoreMap[selected],
-        confidence: 0.82,
+        success: true, test_result: selected, internal_result: selected,
+        test_line_intensity: intensityMap[selected], control_line_intensity: 0.78,
+        score: scoreMap[selected], confidence: 0.82,
         description: `LOI Demo: ${selected} result detected`,
-        model_used: 'mock-loi-demo',
-        is_mock: true
+        model_used: 'mock-loi-demo', is_mock: true
       };
     } else {
       result = await AI_ANALYSIS_SHELLFISH.analyzeStrip(STATE.photo, STATE.toxinType);
@@ -1170,18 +1281,12 @@ async function runAiAnalysis() {
     STATE.photoAiScore = result.score;
     STATE.photoAiConf = result.confidence;
     STATE.testResult = result.internal_result;
-    
     statusText.innerHTML = `✅ AI: ${result.test_result} · Confidence: ${Math.round(result.confidence*100)}%`;
     document.getElementById('step1Next').disabled = false;
-    
-    if (result.internal_result) {
-      selectResult(result.internal_result);
-    }
+    if (result.internal_result) selectResult(result.internal_result);
   } catch (err) {
     console.error('AI analysis failed:', err);
-    STATE.photoAiScore = 0.65;
-    STATE.photoAiConf = 0.70;
-    STATE.testResult = 'trace';
+    STATE.photoAiScore = 0.65; STATE.photoAiConf = 0.70; STATE.testResult = 'trace';
     statusText.innerHTML = '✅ AI ready (LOI simulation mode)';
     document.getElementById('step1Next').disabled = false;
     selectResult('trace');
@@ -1280,11 +1385,7 @@ function populateSummary() {
 }
 
 async function submitReport() {
-  if (!STATE.coords) { 
-    toast('Pin harvest location'); 
-    return; 
-  }
-  
+  if (!STATE.coords) { toast('Pin harvest location'); return; }
   const btn = document.getElementById('submitBtn');
   const originalText = btn.textContent;
   btn.disabled = true;
@@ -1300,23 +1401,14 @@ async function submitReport() {
     }
     
     const report = {
-      uuid: generateUUID(),
-      timestamp: new Date().toISOString(),
-      lat: STATE.coords.lat,
-      lng: STATE.coords.lng,
-      testResult: STATE.testResult,
-      species: STATE.species,
-      toxinType: STATE.toxinType,
-      lotNumber: STATE.lotNumber,
-      harvestTime: STATE.harvestTime,
-      stripPhoto: STATE.photo,
-      stripAiScore: STATE.photoAiScore,
-      stripAiConf: STATE.photoAiConf,
-      freshness: freshness,
-      reporter_id: null
+      uuid: generateUUID(), timestamp: new Date().toISOString(),
+      lat: STATE.coords.lat, lng: STATE.coords.lng,
+      testResult: STATE.testResult, species: STATE.species, toxinType: STATE.toxinType,
+      lotNumber: STATE.lotNumber, harvestTime: STATE.harvestTime,
+      stripPhoto: STATE.photo, stripAiScore: STATE.photoAiScore, stripAiConf: STATE.photoAiConf,
+      freshness: freshness, reporter_id: null
     };
     
-    // Score with CERTUS‑TOXIN or fallback
     if (typeof CERTUS_TOXIN !== 'undefined' && CERTUS_TOXIN.score) {
       const tciResult = await CERTUS_TOXIN.score(report, [], true);
       report.confidenceScore = tciResult.tci;
@@ -1331,30 +1423,25 @@ async function submitReport() {
       const baseScore = 0.65 + Math.random() * 0.30;
       const tci = baseScore * (0.7 + 0.3 * freshness);
       const tier = tci >= 0.70 ? 'high' : (tci >= 0.40 ? 'watch' : 'review');
-      report.confidenceScore = tci;
-      report.confidenceTier = tier;
+      report.confidenceScore = tci; report.confidenceTier = tier;
       report.signalConfidence = STATE.photoAiScore || 0.5;
       report.corroboration = 0.5;
       report.matrixConsistency = 0.7;
       report.uncertaintyMass = 0.3;
-      report.validityStatus = tier === 'high' ? 'VALID' : 'DEGRADED';
+      report.validityStatus = tier==='high'?'VALID':'DEGRADED';
     }
     
     STATE.reports.push(report);
-    
     if (CONFIG.USE_SUPABASE && STATE.isOnline) {
       syncToSupabase(report).catch(console.warn);
     }
-    
     showConfirmation(report);
-    
   } catch (error) {
     console.error('Submission error:', error);
     toast('Submission failed — please try again');
     btn.disabled = false;
     btn.textContent = originalText;
   }
-  // Note: Button is NOT re-enabled on success because we navigate away from the form
 }
 
 function showConfirmation(report) {
@@ -1388,56 +1475,36 @@ function showConfirmation(report) {
 }
 
 function resetReport() {
-  // ===== 1. RESET ALL STATE PROPERTIES =====
-  STATE.photo = null;
-  STATE.testResult = null;
-  STATE.species = null;
-  STATE.coords = null;
-  STATE.photoAiScore = null;
-  STATE.photoAiConf = null;
-  STATE.currentStep = 1; // ← CRITICAL FIX
-  STATE.toxinType = 'PST';
-  STATE.lotNumber = '';
-  STATE.harvestTime = null;
-  STATE.locMode = 'precise';
-  STATE.textLocation = null;
+  STATE.photo = null; STATE.testResult = null; STATE.species = null; STATE.coords = null;
+  STATE.photoAiScore = null; STATE.photoAiConf = null; STATE.currentStep = 1;
+  STATE.toxinType = 'PST'; STATE.lotNumber = ''; STATE.harvestTime = null;
+  STATE.locMode = 'precise'; STATE.textLocation = null;
   
-  // ===== 2. HIDE CONFIRMATION, SHOW FORM =====
   document.getElementById('confirmScreen').classList.remove('show');
   document.getElementById('reportForm').style.display = '';
-  
-  // ===== 3. RESET PHOTO ZONE =====
   document.getElementById('photoPreview').classList.remove('show');
   document.getElementById('photoRetake').classList.remove('show');
   document.getElementById('photoZone').classList.remove('has-photo');
   document.getElementById('photoAiStatus').classList.remove('show');
   document.getElementById('photoInput').value = '';
   
-  // ===== 4. RESET ALL STEP PANELS =====
   for (let i = 1; i <= 5; i++) {
     const panel = document.getElementById(`step${i}`);
     const circle = document.getElementById(`sc${i}`);
     const label = document.getElementById(`sl${i}`);
     if (panel) panel.classList.remove('active');
-    if (circle) {
-      circle.classList.remove('active', 'done');
-      circle.textContent = i;
-    }
+    if (circle) { circle.classList.remove('active', 'done'); circle.textContent = i; }
     if (label) label.classList.remove('active');
   }
-  
-  // ===== 5. RESET PROGRESS LINES =====
   for (let i = 1; i <= 4; i++) {
     const line = document.getElementById(`sline${i}`);
     if (line) line.classList.remove('done');
   }
   
-  // ===== 6. ACTIVATE ONLY STEP 1 =====
   document.getElementById('step1').classList.add('active');
   document.getElementById('sc1').classList.add('active');
   document.getElementById('sl1').classList.add('active');
   
-  // ===== 7. RESET ALL NAVIGATION BUTTONS =====
   document.getElementById('step1Next').disabled = true;
   document.getElementById('step2Next').disabled = true;
   document.getElementById('step4Next').disabled = true;
@@ -1446,29 +1513,20 @@ function resetReport() {
   submitBtn.disabled = false;
   submitBtn.textContent = 'SEAL & SUBMIT';
   
-  // ===== 8. CLEAR ALL SELECTIONS =====
   document.querySelectorAll('.result-btn, .species-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('locPrecise').classList.add('selected');
   document.getElementById('locFuzzy').classList.remove('selected');
   document.getElementById('fuzzyNotice').style.display = 'none';
-  
-  // ===== 9. CLEAR ALL INPUT FIELDS =====
   document.getElementById('textLocation').value = '';
   document.getElementById('lotNumber').value = '';
   document.getElementById('harvestTime').value = '';
   document.getElementById('toxinType').value = 'PST';
   
-  // ===== 10. RESET MAP =====
-  if (STATE.reportMap) {
-    STATE.reportMap.remove();
-    STATE.reportMap = null;
-    STATE.reportMarker = null;
-  }
+  if (STATE.reportMap) { STATE.reportMap.remove(); STATE.reportMap = null; STATE.reportMarker = null; }
   const mapContainer = document.getElementById('locationMap');
   if (mapContainer) mapContainer.innerHTML = '';
   document.getElementById('gpsCoords').innerHTML = '<span style="color:var(--muted)">Acquiring GPS...</span>';
   
-  // ===== 11. SCROLL TO TOP =====
   window.scrollTo(0, 0);
 }
 
@@ -1617,51 +1675,32 @@ async function exportData(fmt){ toast(`${fmt.toUpperCase()} export ready (simula
 
 async function stampWithSTP() {
   const reports = STATE.reports;
-  if (reports.length === 0) {
-    toast('No reports to seal');
-    return;
-  }
-  
+  if (reports.length === 0) { toast('No reports to seal'); return; }
   toast('Creating STP seal...');
   
   const clean = reports.map(r => ({
-    uuid: r.uuid,
-    timestamp: r.timestamp,
-    lat: r.lat,
-    lng: r.lng,
-    species: r.species,
-    toxin_type: r.toxinType,
-    test_result: r.testResult,
-    tci: r.confidenceScore,
-    tci_tier: r.confidenceTier
+    uuid: r.uuid, timestamp: r.timestamp, lat: r.lat, lng: r.lng,
+    species: r.species, toxin_type: r.toxinType, test_result: r.testResult,
+    tci: r.confidenceScore, tci_tier: r.confidenceTier
   }));
   
   const datasetStr = JSON.stringify(clean, null, 2);
   const datasetHash = await computeHash(datasetStr);
   const timestamp = new Date().toISOString();
-  
   const btn = document.getElementById('stpSealBtn');
   const originalText = btn.textContent;
   btn.textContent = 'Sealing...';
   btn.disabled = true;
   
   if (CONFIG.USE_MOCK_STP) {
-    // LOI DEMO: Mock successful seal
     setTimeout(() => {
       currentSTPSeal = {
-        success: true,
-        seal: datasetHash.substring(0, 16) + '...',
+        success: true, seal: datasetHash.substring(0, 16) + '...',
         gregorian: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-        hebrew: '23 Nisan 5786',
-        dreamspell: 'Day 24, Spectral Moon 3/13',
-        unix_utc: Math.floor(Date.now() / 1000),
-        template: '19',
-        template_name: 'SHELLFISH-EXPORT',
+        hebrew: '23 Nisan 5786', dreamspell: 'Day 24, Spectral Moon 3/13',
+        unix_utc: Math.floor(Date.now() / 1000), template: '19', template_name: 'SHELLFISH-EXPORT',
         issue_url: 'https://github.com/AionSystem/VERITAS-SHELLFISH/issues/142',
-        datasetHash,
-        reportsCount: reports.length,
-        exportTimestamp: timestamp,
-        local: false
+        datasetHash, reportsCount: reports.length, exportTimestamp: timestamp, local: false
       };
       displaySTPSeal(currentSTPSeal);
       toast('✅ STP seal created (LOI simulation)');
@@ -1677,17 +1716,13 @@ async function stampWithSTP() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         entry: `VERITAS‑SHELLFISH Export\nTimestamp: ${timestamp}\nTests: ${reports.length}\nDataset SHA-256: ${datasetHash}\nPowered by CERTUS‑TOXIN v1.1\nNOFO: NOAA‑NOS‑NCCOS‑2026‑32955`,
-        type: '19',
-        sessionId: 'shellfish-export-' + timestamp,
-        userId: null,
+        type: '19', sessionId: 'shellfish-export-' + timestamp, userId: null,
         fields: { tests_count: reports.length, dataset_hash: datasetHash, export_timestamp: timestamp }
       })
     });
-    
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const seal = await response.json();
     if (!seal.success) throw new Error(seal.error || 'Seal failed');
-    
     currentSTPSeal = { ...seal, datasetHash, reportsCount: reports.length, exportTimestamp: timestamp, local: false };
     displaySTPSeal(currentSTPSeal);
     toast('✅ STP seal created and uploaded to GitHub!');
@@ -1733,6 +1768,12 @@ function sendHarvestAlert(){ toast('🚨 Unsafe harvest alert sent to regulators
 
 // ==================== VIEW SWITCHING ====================
 function switchView(view){
+  const hamburger = document.getElementById('nav-hamburger');
+  const mobileNav = document.getElementById('mobile-nav');
+  if (hamburger && mobileNav) {
+    hamburger.classList.remove('open');
+    mobileNav.classList.remove('open');
+  }
   document.querySelectorAll('.veritas-view').forEach(v=>v.classList.remove('active'));
   document.getElementById(`view${view.charAt(0).toUpperCase()+view.slice(1)}`).classList.add('active');
   document.querySelectorAll('.veritas-tab').forEach(t=>t.classList.remove('active'));
@@ -1761,7 +1802,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if(!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
   document.getElementById('syncQueue').style.display = 'none';
   if (typeof CERTUS_TOXIN !== 'undefined' && CERTUS_TOXIN.initialize) {
-   await CERTUS_TOXIN.initialize().catch(console.warn);
+    await CERTUS_TOXIN.initialize().catch(console.warn);
   }
   updateCalibrationPanel();
 });
