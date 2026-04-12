@@ -119,8 +119,7 @@ VERITAS-SHELLFISH/
 │
 ├── docs/                                 ← Documentation
 │   ├── CERTUS-TOXIN.md                   ← CERTUS‑TOXIN Engine documentation
-│   ├── NOAA-LOI-SUBMISSION.md            ← LOI text and compliance notes
-│   └── TCT-v1.2-SPEC.md                  ← TrashCan Training specification
+│   └── NOAA-LOI-SUBMISSION.md            ← LOI text and compliance notes
 │
 ├── LICENSE                               ← GPL-3.0
 ├── COMMERCIAL-LICENSE.md                 ← Commercial licensing terms
