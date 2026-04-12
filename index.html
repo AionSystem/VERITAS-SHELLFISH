@@ -1251,8 +1251,81 @@ function handlePhoto(input) {
   reader.readAsDataURL(file);
 }
 
-function triggerPhotoCapture() { document.getElementById('photoInput').click(); }
+function triggerPhotoCapture() {
+  console.log('[DEBUG] triggerPhotoCapture called');
+  const input = document.getElementById('photoInput');
+  if (!input) {
+    console.error('[DEBUG] photoInput not found');
+    toast('Camera input not available');
+    return;
+  }
+  // Clear previous value to ensure change event fires
+  input.value = '';
+  input.click();
+}
 
+function handlePhoto(input) {
+  console.log('[DEBUG] handlePhoto called');
+  const file = input.files[0];
+  
+  if (!file) {
+    console.warn('[DEBUG] No file selected');
+    return;
+  }
+  
+  console.log('[DEBUG] File selected:', file.name, file.type, file.size);
+  
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    toast('Please select an image file');
+    return;
+  }
+  
+  const reader = new FileReader();
+  
+  reader.onloadstart = () => {
+    console.log('[DEBUG] FileReader started');
+  };
+  
+  reader.onload = (e) => {
+    console.log('[DEBUG] FileReader loaded, length:', e.target.result.length);
+    
+    // Set state
+    STATE.photo = e.target.result;
+    
+    // Update UI
+    const preview = document.getElementById('photoPreview');
+    const retake = document.getElementById('photoRetake');
+    const zone = document.getElementById('photoZone');
+    
+    if (preview) {
+      preview.src = STATE.photo;
+      preview.classList.add('show');
+    }
+    if (retake) retake.classList.add('show');
+    if (zone) zone.classList.add('has-photo');
+    
+    console.log('[DEBUG] Photo preview updated, calling AI analysis');
+    
+    // Start AI analysis
+    runAiAnalysis();
+  };
+  
+  reader.onerror = (e) => {
+    console.error('[DEBUG] FileReader error:', e);
+    toast('Failed to load image — try again');
+  };
+  
+  reader.onabort = () => {
+    console.warn('[DEBUG] FileReader aborted');
+    toast('Image loading cancelled');
+  };
+  
+  // Start reading
+  reader.readAsDataURL(file);
+}
+
+  
 async function runAiAnalysis() {
   const statusEl = document.getElementById('photoAiStatus');
   const statusText = document.getElementById('aiStatusText');
