@@ -12,7 +12,7 @@
 [![ORCID — Sheldon K. Salmon](https://img.shields.io/badge/ORCID-0009--0005--8057--5115-a6ce39?style=flat&logo=orcid&logoColor=white)](https://orcid.org/0009-0005-8057-5115)
 
 <!-- CORE ARCHITECTURE -->
-[![CERTUS Engine](https://img.shields.io/badge/CERTUS-v2.5.3-4ade80?style=flat-square)](https://github.com/AionSystem/VERITAS)
+[![CERTUS‑TOXIN Engine](https://img.shields.io/badge/CERTUS--TOXIN-v1.1-4ade80?style=flat-square)](https://github.com/AionSystem/VERITAS-SHELLFISH)
 [![STP](https://img.shields.io/badge/STP-Integrated-2E7D32?style=flat-square&logo=git&logoColor=white)](https://github.com/AionSystem/SOVEREIGN-TRACE-PROTOCOL)
 [![Seal](https://img.shields.io/badge/Seal-SHA--256%20Bound-4527A0?style=flat-square&logo=hashnode&logoColor=white)](https://github.com/AionSystem/VERITAS-SHELLFISH)
 
@@ -22,39 +22,52 @@
 [![Made with JavaScript](https://img.shields.io/badge/Made%20with-JavaScript-yellow)](#)
 [![Feedback Welcome](https://img.shields.io/badge/Feedback-welcome-brightgreen)](https://github.com/AionSystem/VERITAS-SHELLFISH/issues/new/choose)
 
-> **Certainty engineering for seafood safety**
+> **Certainty engineering for seafood safety.**
 > NOAA‑NOS‑NCCOS‑2026‑32955 LOI Demonstration · April 2026
 
 ---
 
 ## Table of Contents
 
-- [Architect's Note on AI Use](#architects-note-on-ai-use)
-- [Quick Start](#quick-start)
-- [Repository Structure](#repository-structure)
-- [Overview](#overview)
-- [The CERTUS Engine (Toxin Confidence)](#the-certus-engine-toxin-confidence)
-- [AI Strip Analysis](#ai-strip-analysis--openrouter-integration)
-- [Knowledge Base & Calibration](#knowledge-base--calibration)
-- [Sovereign Trace Protocol Integration](#sovereign-trace-protocol-integration)
-- [Technical Stack](#technical-stack)
-- [Three Core Modules](#three-core-modules)
-- [Anonymization & Data Sovereignty](#anonymization--data-sovereignty)
-- [Installation & Deployment](#installation--deployment)
-- [License](#license)
-- [Acknowledgments](#acknowledgments)
+1. [LOI Video Showcase](#loi-video-showcase)
+2. [Architect's Note on AI Use](#architects-note-on-ai-use)
+3. [Quick Start](#quick-start)
+4. [Repository Structure](#repository-structure)
+5. [Overview](#overview)
+6. [CERTUS‑TOXIN Engine](#certus-toxin-engine)
+   - [Scoring Dimensions](#scoring-dimensions-toxin-confidence-index)
+   - [Confidence Output](#confidence-output)
+   - [Uncertainty Mass](#uncertainty-mass)
+7. [AI Strip Analysis](#ai-strip-analysis--openrouter-integration)
+8. [Knowledge Base & Calibration](#knowledge-base--calibration)
+9. [Sovereign Trace Protocol Integration](#sovereign-trace-protocol-integration)
+10. [Technical Stack](#technical-stack)
+11. [Three Core Modules](#three-core-modules)
+    - [Test Shellfish](#-test-shellfish--community-submission)
+    - [Unsafe Harvest Alert](#%EF%B8%8F-unsafe-harvest-alert--emergency-signal)
+    - [Regulator Dashboard](#-regulator-dashboard--access-code-gated)
+12. [Anonymization & Data Sovereignty](#anonymization--data-sovereignty)
+13. [Installation & Deployment](#installation--deployment)
+14. [License](#license)
+15. [Acknowledgments](#acknowledgments)
+
+---
+
+## LOI Video Showcase
+
+**[Watch the silent walkthrough on YouTube](https://youtube.com/shorts/HZ-kB39AqNs)**
+
+[![VERITAS‑SHELLFISH Demo](https://img.shields.io/badge/YouTube-Demo_Walkthrough-red?style=for-the-badge&logo=youtube&logoColor=white)](https://youtube.com/shorts/HZ-kB39AqNs)
 
 ---
 
 ## Architect's Note on AI Use
 
-This platform was designed, architected, and directed by **Sheldon K. Salmon**.
-AI tools (large language models) were used as instruments — the same way a laboratory uses a spectrophotometer.
-The intellectual core — the **CERTUS Engine** adaptation for toxin detection, the **Confidence Scoring** dimensions, the **Knowledge Base** calibration workflow, the **STP** sealing integration, and the overall architectural vision — is wholly human‑originated.
+This platform was designed, architected, and directed by **Sheldon K. Salmon**. AI tools (large language models) were used as instruments — the same way a laboratory uses a spectrophotometer.
 
-The NOAA NOFO explicitly notes that submissions produced solely with generative AI are not of interest.
-VERITAS‑SHELLFISH is **not** a generative AI output; it is a human‑built system where AI serves as one of several tools under strict human oversight.
-Every line of code, every design decision, and every formula reflects human intent.
+The intellectual core — the **CERTUS‑TOXIN Engine** adaptation for toxin detection, the **Confidence Scoring** dimensions, the **Knowledge Base** calibration workflow, the **STP** sealing integration, and the overall architectural vision — is wholly human‑originated.
+
+The NOAA NOFO explicitly notes that submissions produced solely with generative AI are not of interest. VERITAS‑SHELLFISH is **not** a generative AI output; it is a human‑built system where AI serves as one of several tools under strict human oversight. Every line of code, every design decision, and every formula reflects human intent.
 
 ---
 
@@ -67,255 +80,308 @@ git clone https://github.com/AionSystem/VERITAS-SHELLFISH.git
 cd VERITAS-SHELLFISH
 ```
 
-Then simply open public/index.html in your browser.
+Open `public/index.html` directly in your browser.
 
-For full offline capability (Service Worker, IndexedDB) serve the files through a local web server:
+For full offline capability (Service Worker, IndexedDB), serve the files through a local web server:
 
 ```bash
 cd public
 python3 -m http.server 8000
-# Then visit http://localhost:8000
+# Visit http://localhost:8000
 ```
 
-Note: The simulation includes a fully functional Regulator Dashboard.
-Use access code NOAA2026 to unlock the responder view, knowledge base, and audit trail verifier.
+> **Regulator access:** Use code `NOAA2026` to unlock the Regulator Dashboard, Knowledge Base, and Audit Trail Verifier.
 
 ---
 
-Repository Structure
+## Repository Structure
 
-Key files for evaluators: public/index.html (full platform) · public/certus-engine-v2.5.3.js (scoring logic) · public/ai-analysis.js (OpenRouter integration)
+> **Key files for evaluators:**
+> `public/index.html` — full platform · `public/certus-toxin-engine-v1.1.js` — scoring logic · `public/ai-analysis-shellfish.js` — OpenRouter integration
 
 ```
 VERITAS-SHELLFISH/
-├── public/                         ← All static frontend assets
-│   ├── index.html                  ← Main VERITAS‑SHELLFISH interface
-│   ├── certus-engine-v2.5.3.js     ← CERTUS Engine (epistemic scoring)
-│   ├── ai-analysis.js              ← OpenRouter AI integration (LFA strip analysis)
-│   ├── manifest.json               ← PWA manifest
-│   ├── sw.js                       ← Service Worker (offline capability)
-│   └── icons/                      ← App icons for PWA
+├── public/                               ← Static frontend assets
+│   ├── index.html                        ← Main VERITAS‑SHELLFISH interface
+│   ├── certus-toxin-engine-v1.1.js       ← CERTUS‑TOXIN Engine (epistemic scoring)
+│   ├── ai-analysis-shellfish.js          ← OpenRouter AI integration (LFA strip analysis)
+│   ├── manifest.json                     ← PWA manifest
+│   ├── sw.js                             ← Service Worker (offline capability)
+│   └── icons/                            ← App icons for PWA
 │
-├── api/                            ← Vercel serverless functions (separate deployment)
-│   ├── stp-seal.js                 ← STP seal service (GitHub ledger)
-│   └── templates/                  ← STP template registry (17 templates incl. VERITAS‑SHELLFISH)
+├── api/                                  ← Vercel serverless functions
+│   ├── analyze-strip.js                  ← AI strip analysis endpoint (OpenRouter)
+│   ├── stp-seal-shellfish.js             ← STP seal service (GitHub ledger)
+│   └── templates/                        ← STP template registry
+│       ├── 17-shellfish-test.json        ← SHELLFISH-TEST template
+│       ├── 18-shellfish-calibration.json ← SHELLFISH-CALIBRATION template
+│       └── 19-shellfish-export.json      ← SHELLFISH-EXPORT template
 │
-├── docs/                           ← Documentation
-│   ├── CERTUS-TOXIN.md             ← CERTUS Engine adaptation for HAB toxins
-│   └── NOAA-LOI-SUBMISSION.md      ← LOI text and compliance notes
+├── docs/                                 ← Documentation
+│   ├── CERTUS-TOXIN.md                   ← CERTUS‑TOXIN Engine documentation
+│   ├── NOAA-LOI-SUBMISSION.md            ← LOI text and compliance notes
+│   └── TCT-v1.2-SPEC.md                  ← TrashCan Training specification
 │
-├── LICENSE                         ← GPL-3.0
-├── COMMERCIAL-LICENSE.md
-└── README.md                       ← This file
+├── LICENSE                               ← GPL-3.0
+├── COMMERCIAL-LICENSE.md                 ← Commercial licensing terms
+└── README.md                             ← This file
 ```
 
 ---
 
-Overview
+## Overview
 
-Most point‑of‑use toxin tests stop at a binary result.
-They do not tell a harvester, a regulator, or a tribal monitoring program how much to trust that result under field conditions.
+Most point‑of‑use toxin tests stop at a binary result. They do not tell a harvester, a regulator, or a tribal monitoring program how much to trust that result under field conditions.
 
-VERITAS‑SHELLFISH is an open‑source epistemic scoring and data integrity platform for point‑of‑use HAB toxin detection.
-It ingests data from any lateral flow assay or biosensor, computes a calibrated Confidence Score with quantified Uncertainty Mass, and cryptographically seals every result for an immutable audit trail.
+**VERITAS‑SHELLFISH** is an open‑source epistemic scoring and data integrity platform for point‑of‑use HAB toxin detection. It ingests data from any lateral flow assay or biosensor, computes a calibrated Confidence Score with quantified Uncertainty Mass, and cryptographically seals every result for an immutable audit trail.
 
-How it works — three steps:
+### How It Works
 
-1. A community harvester or field technician photographs an LFA test strip. The CERTUS Engine scores the result instantly.
-2. Authorized labs upload calibration data (PDFs, CSVs) to the Knowledge Base, refining the confidence model over time.
-3. Regulators access a confidence‑weighted dashboard showing harvest zone risk levels, with every data point sealed and verifiable.
+```
+1. CAPTURE   A community harvester photographs an LFA strip.
+             The CERTUS‑TOXIN Engine scores the result instantly.
 
-· Live Simulation: aionsystem.github.io/veritas-shellfish
-· NOFO: NOAA‑NOS‑NCCOS‑2026‑32955 · HAB Innovation Challenge: Toxin Detection in Seafood
+2. CALIBRATE Authorized labs upload calibration data (PDFs, CSVs)
+             to the Knowledge Base, refining the confidence model over time.
 
----
+3. REGULATE  Regulators access a confidence‑weighted dashboard showing
+             harvest zone risk levels — every data point sealed and verifiable.
+```
 
-The CERTUS Engine (Toxin Confidence)
+**Live Simulation:** [aionsystem.github.io/veritas-shellfish](https://aionsystem.github.io/veritas-shellfish)
 
-The CERTUS Engine (v2.5.3) is the core epistemic scoring system, adapted for HAB toxin detection.
-
-Scoring Dimensions (Toxin Confidence Index)
-
-Dimension Weight Description
-Signal Confidence 35% AI analysis of test/control line intensity & image quality
-Corroboration 30% Agreement with nearby tests (same species, toxin, timeframe)
-Temporal Freshness 20% Decay based on time since harvest (not test time)
-Matrix Consistency 15% Species‑specific toxin profile alignment
-
-Confidence Output
-
-Score Range Validity Status Action
-≥ 0.70 VALID High confidence — regulatory decision support
-0.40–0.69 DEGRADED Monitor — verify with additional testing
-< 0.40 SUSPENDED Field verification required before action
-
-Uncertainty Mass (UM)
-
-Every score carries an Uncertainty Mass — a measure of how much the score itself is uncertain:
-
-UM Meaning
-< 0.35 Score is reliable
-0.35–0.60 Score useful but uncertain
-≥ 0.60 Do not rely on this score
-
-Graduated Model Trust: The engine uses a declared calibration status for the AI strip reader.
-As partner labs upload ground‑truth validation data, the uncertainty penalty automatically decreases — no code changes required.
+**NOFO:** NOAA‑NOS‑NCCOS‑2026‑32955 · HAB Innovation Challenge: Toxin Detection in Seafood
 
 ---
 
-AI Strip Analysis — OpenRouter Integration
+## CERTUS‑TOXIN Engine
 
-VERITAS‑SHELLFISH uses OpenRouter to access AI models for lateral flow assay interpretation.
+The **CERTUS‑TOXIN Engine (v1.1)** is the core epistemic scoring system, adapted for HAB toxin detection. It replaces binary pass/fail outputs with a multi-dimensional confidence score that propagates uncertainty explicitly.
 
-Model Configuration
+### Scoring Dimensions (Toxin Confidence Index)
 
-Priority Model Purpose
-Primary GPT‑4o‑mini (OpenAI) Fast, cost‑efficient test line analysis
-Fallback Claude 3.5 Sonnet (Anthropic) Higher‑accuracy fallback
+| Dimension | Weight | Description |
+|---|---|---|
+| Signal Confidence | 35% | AI analysis of test/control line intensity and image quality |
+| Corroboration | 30% | Agreement with nearby tests (same species, toxin, timeframe) |
+| Temporal Freshness | 20% | Decay based on time since harvest — not test time |
+| Matrix Consistency | 15% | Species‑specific toxin profile alignment |
 
-How It Works
+### Confidence Output
 
-1. User captures photo → Canvas strips EXIF metadata.
-2. Image sent to OpenRouter API with structured prompt: "Analyze this lateral flow assay strip. Identify test line and control line. Estimate intensity ratio and provide confidence."
-3. AI returns: test line intensity, control line presence, confidence.
-4. CERTUS Engine applies graduated trust scoring to the intensity value for the Signal Confidence dimension.
-5. If API unavailable → falls back to mock analysis (offline simulation mode).
+| Score Range | Validity Status | Recommended Action |
+|---|---|---|
+| ≥ 0.70 | **VALID** | High confidence — regulatory decision support |
+| 0.40–0.69 | **DEGRADED** | Monitor — verify with additional testing |
+| < 0.40 | **SUSPENDED** | Field verification required before any action |
 
----
+### Uncertainty Mass
 
-Knowledge Base & Calibration
+Every score carries an **Uncertainty Mass (UM)** — a measure of how uncertain the score itself is, independent of the score value.
 
-The platform includes a secure Knowledge Base Module (accessible via Regulator Dashboard) where authorized partners can upload structured calibration data.
+| UM | Interpretation |
+|---|---|
+| < 0.35 | Score is reliable |
+| 0.35–0.60 | Score is useful but uncertain |
+| ≥ 0.60 | Do not rely on this score |
 
-Supported Formats
-
-· PDF laboratory reports
-· CSV / Excel validation datasets
-· Instrument exports (HPLC‑MS, ELISA plate readers)
-
-Calibration Workflow (Simulation)
-
-1. Partner uploads file → file is hashed (SHA‑256) client‑side.
-2. File staged in IndexedDB (offline) / Supabase (online).
-3. AI Calibration Engine (system prompt) extracts parameters:
-   · Toxin type, LOD, test line threshold, matrix effects.
-4. Updated calibration parameters are displayed in the Active Calibration Panel.
-5. Future test results automatically use the updated model.
-
-In the LOI simulation, this workflow is demonstrated with mock data.
-The full proposal includes integration with a partner lab (e.g., SEATOR network) for ground‑truth HPLC‑MS validation.
+**Graduated Model Trust:** The engine declares a calibration status for the AI strip reader. As partner labs upload ground‑truth validation data, the uncertainty penalty decreases automatically — no code changes required.
 
 ---
 
-Sovereign Trace Protocol Integration
+## AI Strip Analysis — OpenRouter Integration
 
-VERITAS‑SHELLFISH integrates the Sovereign Trace Protocol (STP) — a permanence infrastructure with 17 template types.
+VERITAS‑SHELLFISH uses [OpenRouter](https://openrouter.ai) to route AI model calls for lateral flow assay interpretation.
 
-Template Trigger Result
-Template 15 (VERITAS Report) Automatic after test submission Every toxin test result is permanently sealed
-Template 17 (Calibration Data) On Knowledge Base upload Calibration datasets are sealed for auditability
-Template 16 (VERITAS Export) Manual via Dashboard Exported datasets have verifiable integrity
+### Model Configuration
 
-Verification
+| Priority | Model | Purpose |
+|---|---|---|
+| Primary | GPT‑4o‑mini (OpenAI) | Fast, cost‑efficient test line analysis |
+| Fallback | Claude 3.5 Sonnet (Anthropic) | Higher‑accuracy fallback |
 
-Anyone can verify a sealed test result or exported dataset by:
+### Analysis Pipeline
 
-1. Recomputing the SHA‑256 hash of the file.
-2. Comparing it to the hash sealed in the STP ledger (GitHub Issues).
-3. If they match, the data has not been altered.
+```
+1. User captures photo
+   → Canvas API strips EXIF metadata client‑side
 
----
+2. Image sent to OpenRouter API
+   → Structured prompt: test line / control line / intensity ratio / confidence
 
-Technical Stack
+3. AI returns structured result
+   → test line intensity · control line presence · confidence value
 
-Layer Technology Why
-App Shell PWA (HTML + Service Worker) Offline‑first, installable, works in remote harvest areas
-Local Storage IndexedDB Survives offline, syncs when back online
-Maps Leaflet.js + OpenStreetMap Free, open source, harvest zone visualization
-AI Analysis OpenRouter (GPT‑4o‑mini + Claude 3.5 Sonnet) Cost‑efficient with high‑accuracy fallback
-Backend Sync Supabase Real‑time, row‑level security
-STP Ledger GitHub Issues + API Immutable, verifiable, permanent
-Deployment Vercel (api/) + GitHub Pages (public/) Frontend fully functional standalone
-License GPL‑3.0 with Commercial option Open source for research & communities; commercial licenses available
+4. CERTUS‑TOXIN Engine applies graduated trust scoring
+   → AI intensity value feeds the Signal Confidence dimension
 
----
-
-Three Core Modules
-
-🧪 Test Shellfish — Community Submission (Mobile‑First)
-
-For a subsistence harvester or field technician with limited connectivity who needs to record and certify a test result.
-
-· Works offline (IndexedDB + Service Worker)
-· Photo capture (EXIF stripped automatically)
-· Select shellfish species, toxin type, lot number
-· Harvest time logging (for freshness scoring)
-· AI‑assisted strip analysis
-· Confidence score + validity status displayed immediately
-· Automatic STP seal (Template 15) — every test permanently recorded
-
-⚠️ Unsafe Harvest Alert — Emergency Signal
-
-For a community member or monitor to flag a harvest zone as potentially unsafe based on recent tests.
-
-· One‑tap alert button
-· Automatic location capture (GPS with fallback)
-· Works offline — queues alert for when connectivity returns
-· High‑visibility warning on regulator dashboard
-· Critical urgency flag in export data
-
-📊 Regulator Dashboard — Access‑Code Gated
-
-For NOAA program managers, tribal monitoring coordinators, or lab directors to triage incoming test data and calibration uploads.
-
-Access code: NOAA2026
-
-· Confidence map with color‑coded harvest zones
-· Live confidence dashboard with score distribution
-· Knowledge Base Uploader — drag‑and‑drop calibration files
-· Active Calibration Panel — view current model parameters
-· Audit Trail Verifier — input a seal hash to view chain of custody
-· One‑click export: JSON, CSV, GeoJSON with integrity hash
-· STP seal integration — one‑click dataset sealing
+5. Offline fallback
+   → If API unavailable: mock analysis activates (simulation mode)
+```
 
 ---
 
-Anonymization & Data Sovereignty
+## Knowledge Base & Calibration
 
-· No accounts, no emails, no IP logging at the application layer — UUID generated client‑side.
-· EXIF metadata stripped from all photos before upload.
-· GPS fuzzing option — "Area Mode (±100m)" for subsistence harvest zones.
-· Indigenous data sovereignty — UNDRIP Article 31 as a design principle; data remains under community control.
+The **Knowledge Base Module** (accessible via Regulator Dashboard) allows authorized partners to upload structured calibration data, refining the engine's confidence model over time without code changes.
+
+### Supported Formats
+
+- PDF laboratory reports
+- CSV / Excel validation datasets
+- Instrument exports (HPLC‑MS, ELISA plate readers)
+
+### Calibration Workflow
+
+```
+1. Partner uploads file
+   → SHA‑256 hash computed client‑side
+
+2. File staged
+   → IndexedDB (offline) / Supabase (online)
+
+3. AI Calibration Engine extracts parameters
+   → Toxin type · LOD · test line threshold · matrix effects
+
+4. Active Calibration Panel updates
+   → Parameters displayed immediately
+
+5. Future test results use updated model automatically
+   → No deployment required
+```
+
+> In the LOI simulation, this workflow is demonstrated with mock data. The full proposal includes integration with a partner lab (e.g., SEATOR network) for ground‑truth HPLC‑MS validation.
 
 ---
 
-Installation & Deployment
+## Sovereign Trace Protocol Integration
 
-1. Clone the repository
+VERITAS‑SHELLFISH integrates the **Sovereign Trace Protocol (STP)** — a cryptographic permanence infrastructure with 19 registered template types. Every test result, calibration upload, and dataset export receives a permanent SHA‑256 seal written to the GitHub ledger.
+
+### Template Registry
+
+| Template | Trigger | What Gets Sealed |
+|---|---|---|
+| Template 17 · SHELLFISH-TEST | Automatic on test submission | Every toxin test result |
+| Template 18 · SHELLFISH-CALIBRATION | On Knowledge Base upload | Calibration datasets |
+| Template 19 · SHELLFISH-EXPORT | Manual via Dashboard | Exported datasets |
+
+### Verification Protocol
+
+Anyone can verify a sealed result or export independently:
+
+```
+1. Recompute the SHA‑256 hash of the file or record.
+2. Compare to the hash sealed in the STP ledger (GitHub Issues).
+3. Match = data is unaltered.
+   Mismatch = tampering or corruption has occurred.
+```
+
+No VERITAS‑SHELLFISH access is required to verify. The ledger is public and permanent.
+
+---
+
+## Technical Stack
+
+| Layer | Technology | Rationale |
+|---|---|---|
+| App Shell | PWA (HTML + Service Worker) | Offline‑first, installable, works in remote harvest areas |
+| Local Storage | IndexedDB | Survives offline sessions, syncs on reconnect |
+| Maps | Leaflet.js + OpenStreetMap | Free, open source, harvest zone visualization |
+| AI Analysis | OpenRouter (GPT‑4o‑mini + Claude 3.5 Sonnet) | Cost‑efficient with high‑accuracy fallback |
+| Backend Sync | Supabase | Real‑time, row‑level security |
+| STP Ledger | GitHub Issues + API | Immutable, verifiable, permanent |
+| Deployment | Vercel (`api/`) + GitHub Pages (`public/`) | Frontend fully functional standalone |
+| License | GPL‑3.0 with Commercial option | Open for research & communities; commercial path available |
+
+---
+
+## Three Core Modules
+
+### 🧪 Test Shellfish — Community Submission
+
+*For a subsistence harvester or field technician with limited connectivity.*
+
+- Works fully offline (IndexedDB + Service Worker)
+- Photo capture with automatic EXIF stripping
+- Species, toxin type, and lot number selection
+- Harvest time logging (feeds Temporal Freshness scoring)
+- AI‑assisted strip analysis via OpenRouter
+- Confidence Score and Validity Status displayed immediately
+- Automatic STP seal (Template 17) — every test permanently recorded
+
+---
+
+### ⚠️ Unsafe Harvest Alert — Emergency Signal
+
+*For a community member or monitor to flag a harvest zone in real time.*
+
+- One‑tap alert button
+- Automatic GPS location capture with manual fallback
+- Works offline — queues alert for transmission on reconnect
+- Alert appears immediately on the Regulator Dashboard
+- Critical urgency flag propagated through all export formats
+
+---
+
+### 📊 Regulator Dashboard — Access‑Code Gated
+
+*For NOAA program managers, tribal monitoring coordinators, and lab directors.*
+
+**Access code:** `NOAA2026`
+
+| Feature | Description |
+|---|---|
+| Confidence Map | Color‑coded harvest zone risk visualization |
+| Live Dashboard | Score distribution across all submissions |
+| Knowledge Base Uploader | Drag‑and‑drop calibration file intake |
+| Active Calibration Panel | Current model parameters at a glance |
+| Audit Trail Verifier | Input a seal hash to view full chain of custody |
+| One‑Click Export | JSON, CSV, GeoJSON — all with integrity hash |
+| STP Seal | One‑click dataset sealing (Template 19) |
+
+---
+
+## Anonymization & Data Sovereignty
+
+| Principle | Implementation |
+|---|---|
+| No accounts | UUID generated client‑side — no emails, no IP logging at the application layer |
+| Photo privacy | EXIF metadata stripped from all images before upload |
+| Location fuzzing | "Area Mode (±100m)" option for subsistence harvest zones |
+| Indigenous data sovereignty | UNDRIP Article 31 as a design principle — data remains under community control |
+
+---
+
+## Installation & Deployment
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/AionSystem/VERITAS-SHELLFISH.git
 cd VERITAS-SHELLFISH
 ```
 
-2. Configure OpenRouter (for AI strip analysis)
+### 2. Configure OpenRouter (AI Strip Analysis)
 
-· Sign up at openrouter.ai
-· Get your API key
-· On first use, the app will prompt for the key (stored locally)
+1. Sign up at [openrouter.ai](https://openrouter.ai)
+2. Obtain an API key
+3. On first use, the app will prompt for the key — stored locally in the browser
 
-3. Deploy to GitHub Pages
+### 3. Deploy to GitHub Pages
 
 ```bash
-# From the public/ directory
+# Ensure public/ contains the latest build
 git add .
 git commit -m "Deploy VERITAS‑SHELLFISH simulation"
 git push origin main
 ```
 
-The simulation will be live at https://aionsystem.github.io/veritas-shellfish.
+Live at: `https://aionsystem.github.io/veritas-shellfish`
 
-4. (Optional) Deploy STP seal service to Vercel
+### 4. Deploy Vercel Backend (Optional)
+
+Required only for server‑side STP sealing and API proxying.
 
 ```bash
 cd api
@@ -324,43 +390,47 @@ vercel --prod
 
 ---
 
-License
+## License
 
-VERITAS‑SHELLFISH is dual‑licensed:
+VERITAS‑SHELLFISH is dual‑licensed to serve both public‑interest and commercial use cases.
 
-· GNU General Public License v3.0 — for research, non‑profit, tribal monitoring, and open‑source use.
-· Commercial License — for proprietary integration, OEM applications, and commercial labs.
+| User Type | License |
+|---|---|
+| Tribal Monitoring Programs / Subsistence Communities | GPL‑3.0 (Free) |
+| Academic / NOAA‑Funded Research | GPL‑3.0 (Free) |
+| Government Agencies (Non‑Commercial Use) | GPL‑3.0 (Free) |
+| Commercial Laboratories / Kit Manufacturers | Commercial License (Fee) |
 
-User Type License
-Tribal Monitoring Programs / Subsistence Communities GPL‑3.0 (Free)
-Academic / NOAA‑Funded Research GPL‑3.0 (Free)
-Government Agencies (Non‑Commercial Use) GPL‑3.0 (Free)
-Commercial Laboratories / Kit Manufacturers Commercial License (Fee)
+- **[GNU General Public License v3.0](LICENSE)** — for research, non‑profit, tribal monitoring, and open‑source use
+- **[Commercial License](COMMERCIAL-LICENSE.md)** — for proprietary integration, OEM applications, and commercial labs
 
-See LICENSE for GPL terms and COMMERCIAL-LICENSE.md for commercial licensing information.
-
-For commercial licensing inquiries: aionsystem@outlook.com
-
----
-
-Acknowledgments
-
-· CERTUS Engine — epistemic scoring framework
-· Sovereign Trace Protocol — cryptographic permanence infrastructure
-· OpenRouter — unified AI API
-· Leaflet.js — open‑source mapping
-· Supabase — backend sync
-· xBD Dataset — inspiration for graduated model trust scoring
+Commercial licensing inquiries: [aionsystem@outlook.com](mailto:aionsystem@outlook.com)
 
 ---
 
-"The code is open source. The architecture is not replicable."
+## Acknowledgments
 
-This is an application of the AION Constitutional Stack — applied to seafood safety, subsistence harvest protection, and verifiable toxin detection.
-The method travels. The judgment behind it doesn't.
+| Component | Role |
+|---|---|
+| [CERTUS‑TOXIN Engine](docs/CERTUS-TOXIN.md) | Epistemic scoring framework |
+| [Sovereign Trace Protocol](https://github.com/AionSystem/SOVEREIGN-TRACE-PROTOCOL) | Cryptographic permanence infrastructure |
+| [OpenRouter](https://openrouter.ai) | Unified AI API routing |
+| [Leaflet.js](https://leafletjs.com) | Open‑source mapping library |
+| [Supabase](https://supabase.com) | Backend sync and row‑level security |
+| xBD Dataset | Inspiration for graduated model trust scoring |
 
 ---
 
-CERTUS Engine v2.5.3 — Adapted for HAB Toxin Detection
-STP Template Registry — 17 permanent seal types
-VERITAS‑SHELLFISH — Every test sealed. Every calibration logged. Every export verifiable.
+> *"The code is open source. The architecture is not replicable."*
+
+This is an application of the **AION Constitutional Stack** — applied to seafood safety, subsistence harvest protection, and verifiable toxin detection. The method travels. The judgment behind it doesn't.
+
+---
+
+<div align="center">
+
+**CERTUS‑TOXIN Engine v1.1** · **STP Template Registry — 19 permanent seal types**
+
+*Every test sealed. Every calibration logged. Every export verifiable.*
+
+</div>
