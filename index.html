@@ -14,7 +14,7 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/shp-write@0.3.2/shpwrite.js"></script>
   <script src="/VERITAS-SHELLFISH/public/certus-toxin-engine-v1.1.js"></script>
-  <script src="/VERITAS-SHELLFISH/public/ai-analysis.js"></script>
+  <script src="/VERITAS-SHELLFISH/public/ai-analysis-shellfish.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
@@ -325,7 +325,7 @@
     <div class="confirm-screen" id="confirmScreen">
       <div class="confirm-check">✓</div>
       <div style="font-family:var(--sans);font-size:28px;letter-spacing:2px;color:var(--text);margin-bottom:6px;" data-i18n="report_received">TEST RECORDED</div>
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:24px;" data-i18n="certus_scored">CERTUS Engine · Confidence Scored</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:24px;" data-i18n="certus_scored">CERTUS‑TOXIN Engine · Confidence Scored</div>
       <div class="dci-display">
         <div class="dci-label" data-i18n="dci_label">TOXIN CONFIDENCE INDEX · CERTUS‑TOXIN v1.1</div>
         <div class="dci-score-large" id="confirmDciScore">—</div>
@@ -333,64 +333,64 @@
         <div class="dci-explain" data-i18n="dci_explain">Confidence scored on signal quality · corroboration · freshness · matrix consistency.</div>
       </div>
       <div id="engagementMessage" class="engagement-message"></div>
-      <button class="btn btn-primary" onclick="resetReport()">Test Another Sample</button>
-      <button class="btn btn-secondary" onclick="switchView('respond')">View Dashboard</button>
+      <button class="btn btn-primary" onclick="resetReport()" data-i18n="test_another">Test Another Sample</button>
+      <button class="btn btn-secondary" onclick="switchView('respond')" data-i18n="view_dashboard">View Dashboard</button>
     </div>
     <div id="reportForm">
       <div class="step-progress">
-        <div class="step-node"><div class="step-circle active" id="sc1">1</div><div class="step-label active" id="sl1">Strip</div></div>
+        <div class="step-node"><div class="step-circle active" id="sc1">1</div><div class="step-label active" id="sl1" data-i18n="step_strip">Strip</div></div>
         <div class="step-line" id="sline1"></div>
-        <div class="step-node"><div class="step-circle" id="sc2">2</div><div class="step-label" id="sl2">Result</div></div>
+        <div class="step-node"><div class="step-circle" id="sc2">2</div><div class="step-label" id="sl2" data-i18n="step_result">Result</div></div>
         <div class="step-line" id="sline2"></div>
-        <div class="step-node"><div class="step-circle" id="sc3">3</div><div class="step-label" id="sl3">Details</div></div>
+        <div class="step-node"><div class="step-circle" id="sc3">3</div><div class="step-label" id="sl3" data-i18n="step_details">Details</div></div>
         <div class="step-line" id="sline3"></div>
-        <div class="step-node"><div class="step-circle" id="sc4">4</div><div class="step-label" id="sl4">Harvest Zone</div></div>
+        <div class="step-node"><div class="step-circle" id="sc4">4</div><div class="step-label" id="sl4" data-i18n="step_location">Harvest Zone</div></div>
         <div class="step-line" id="sline4"></div>
-        <div class="step-node"><div class="step-circle" id="sc5">5</div><div class="step-label" id="sl5">Review</div></div>
+        <div class="step-node"><div class="step-circle" id="sc5">5</div><div class="step-label" id="sl5" data-i18n="step_review">Review</div></div>
       </div>
       <div class="step-panel active" id="step1">
-        <div class="step-title">PHOTOGRAPH TEST STRIP</div>
-        <div class="step-subtitle">Capture the lateral flow assay result clearly</div>
+        <div class="step-title" data-i18n="photo_title">PHOTOGRAPH TEST STRIP</div>
+        <div class="step-subtitle" data-i18n="photo_sub">Capture the lateral flow assay result clearly</div>
         <div class="photo-zone" id="photoZone" onclick="triggerPhotoCapture()">
           <div class="photo-icon">📷</div>
-          <div class="photo-hint">TAP TO PHOTOGRAPH LFA STRIP</div>
+          <div class="photo-hint" data-i18n="photo_hint">TAP TO PHOTOGRAPH LFA STRIP</div>
           <img id="photoPreview" alt="Test strip">
-          <button class="photo-retake" id="photoRetake" onclick="event.stopPropagation(); triggerPhotoCapture()">RETAKE</button>
+          <button class="photo-retake" id="photoRetake" onclick="event.stopPropagation(); triggerPhotoCapture()" data-i18n="retake">RETAKE</button>
         </div>
         <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(this)">
-        <div class="photo-ai-status" id="photoAiStatus"><span class="spinner"></span><span id="aiStatusText">CERTUS analyzing test lines...</span></div>
-        <button class="btn btn-primary" style="margin-top:16px;" id="step1Next" onclick="goStep(2)" disabled>NEXT</button>
+        <div class="photo-ai-status" id="photoAiStatus"><span class="spinner"></span><span id="aiStatusText" data-i18n="analyzing">CERTUS analyzing test lines...</span></div>
+        <button class="btn btn-primary" style="margin-top:16px;" id="step1Next" onclick="goStep(2)" disabled data-i18n="next">NEXT</button>
       </div>
       <div class="step-panel" id="step2">
-        <div class="step-title">TEST RESULT</div>
-        <div class="step-subtitle">Read the test and control lines</div>
+        <div class="step-title" data-i18n="test_result_title">TEST RESULT</div>
+        <div class="step-subtitle" data-i18n="test_result_sub">Read the test and control lines</div>
         <div class="result-grid">
           <button class="result-btn" onclick="selectResult('negative')" id="result-negative">
-            <div class="result-label">Negative</div>
-            <div class="result-desc">Control line only · No toxin detected</div>
+            <div class="result-label" data-i18n="negative">Negative</div>
+            <div class="result-desc" data-i18n="negative_desc">Control line only · No toxin detected</div>
           </button>
           <button class="result-btn" onclick="selectResult('trace')" id="result-trace">
-            <div class="result-label">Trace</div>
-            <div class="result-desc">Faint test line · Below action level</div>
+            <div class="result-label" data-i18n="trace">Trace</div>
+            <div class="result-desc" data-i18n="trace_desc">Faint test line · Below action level</div>
           </button>
           <button class="result-btn" onclick="selectResult('positive')" id="result-positive">
-            <div class="result-label">Positive</div>
-            <div class="result-desc">Clear test line · Action level exceeded</div>
+            <div class="result-label" data-i18n="positive">Positive</div>
+            <div class="result-desc" data-i18n="positive_desc">Clear test line · Action level exceeded</div>
           </button>
           <button class="result-btn" onclick="selectResult('strong_positive')" id="result-strong">
-            <div class="result-label">Strong Positive</div>
-            <div class="result-desc">Test line > control · High toxin</div>
+            <div class="result-label" data-i18n="strong_positive">Strong Positive</div>
+            <div class="result-desc" data-i18n="strong_positive_desc">Test line > control · High toxin</div>
           </button>
         </div>
         <div style="display:flex;gap:8px;margin-top:16px;">
-          <button class="btn btn-secondary" style="flex:0 0 80px" onclick="goStep(1)">← BACK</button>
-          <button class="btn btn-primary" id="step2Next" onclick="goStep(3)" disabled>NEXT</button>
+          <button class="btn btn-secondary" style="flex:0 0 80px" onclick="goStep(1)" data-i18n="back">← BACK</button>
+          <button class="btn btn-primary" id="step2Next" onclick="goStep(3)" disabled data-i18n="next">NEXT</button>
         </div>
       </div>
       <div class="step-panel" id="step3">
-        <div class="step-title">SAMPLE DETAILS</div>
-        <div class="step-subtitle">Species, toxin type, and traceability</div>
-        <div class="form-group"><label class="form-label">Shellfish Species</label>
+        <div class="step-title" data-i18n="sample_details">SAMPLE DETAILS</div>
+        <div class="step-subtitle" data-i18n="sample_sub">Species, toxin type, and traceability</div>
+        <div class="form-group"><label class="form-label" data-i18n="species_label">Shellfish Species</label>
           <div class="species-grid">
             <button class="species-btn" data-species="Butter Clam" onclick="selectSpecies('Butter Clam')"><div class="species-icon">🦪</div><div class="species-label">Butter Clam</div></button>
             <button class="species-btn" data-species="Blue Mussel" onclick="selectSpecies('Blue Mussel')"><div class="species-icon">🐚</div><div class="species-label">Blue Mussel</div></button>
@@ -402,7 +402,7 @@
             <button class="species-btn" data-species="Other" onclick="selectSpecies('Other')"><div class="species-icon">📝</div><div class="species-label">Other</div></button>
           </div>
         </div>
-        <div class="form-group"><label class="form-label">Toxin Type</label>
+        <div class="form-group"><label class="form-label" data-i18n="toxin_label">Toxin Type</label>
           <select class="form-select" id="toxinType">
             <option value="PST">Paralytic Shellfish Toxin (PST / Saxitoxin)</option>
             <option value="ASP">Amnesic Shellfish Poisoning (ASP / Domoic Acid)</option>
@@ -410,40 +410,40 @@
             <option value="Other">Other</option>
           </select>
         </div>
-        <div class="form-group"><label class="form-label">LFA Strip Lot Number</label><input type="text" id="lotNumber" class="form-input" placeholder="e.g., LFA-PST-2026-04"></div>
-        <div class="form-group"><label class="form-label">Harvest Time (for freshness scoring)</label><input type="datetime-local" id="harvestTime" class="form-input"></div>
+        <div class="form-group"><label class="form-label" data-i18n="lot_label">LFA Strip Lot Number</label><input type="text" id="lotNumber" class="form-input" placeholder="e.g., LFA-PST-2026-04"></div>
+        <div class="form-group"><label class="form-label" data-i18n="harvest_label">Harvest Time (for freshness scoring)</label><input type="datetime-local" id="harvestTime" class="form-input"></div>
         <div style="display:flex;gap:8px;margin-top:16px;">
-          <button class="btn btn-secondary" style="flex:0 0 80px" onclick="goStep(2)">← BACK</button>
-          <button class="btn btn-primary" id="step3Next" onclick="goStep(4)">NEXT</button>
+          <button class="btn btn-secondary" style="flex:0 0 80px" onclick="goStep(2)" data-i18n="back">← BACK</button>
+          <button class="btn btn-primary" id="step3Next" onclick="goStep(4)" data-i18n="next">NEXT</button>
         </div>
       </div>
       <div class="step-panel" id="step4">
-        <div class="step-title">HARVEST ZONE</div>
-        <div class="step-subtitle">Pin the harvest location</div>
+        <div class="step-title" data-i18n="harvest_zone">HARVEST ZONE</div>
+        <div class="step-subtitle" data-i18n="harvest_sub">Pin the harvest location</div>
         <div class="location-options">
-          <div class="loc-opt selected" id="locPrecise" onclick="selectLocMode('precise')"><div class="loc-opt-label">📍 Precise</div><div class="loc-opt-desc">Exact GPS</div></div>
-          <div class="loc-opt" id="locFuzzy" onclick="selectLocMode('fuzzy')"><div class="loc-opt-label">🔵 Area</div><div class="loc-opt-desc">±100m radius</div></div>
+          <div class="loc-opt selected" id="locPrecise" onclick="selectLocMode('precise')"><div class="loc-opt-label" data-i18n="precise">📍 Precise</div><div class="loc-opt-desc" data-i18n="precise_desc">Exact GPS</div></div>
+          <div class="loc-opt" id="locFuzzy" onclick="selectLocMode('fuzzy')"><div class="loc-opt-label" data-i18n="area">🔵 Area</div><div class="loc-opt-desc" data-i18n="area_desc">±100m radius</div></div>
         </div>
-        <div class="fuzzy-notice" id="fuzzyNotice">Area mode selected — exact location protected. Suitable for subsistence harvest zones.</div>
+        <div class="fuzzy-notice" id="fuzzyNotice" data-i18n="fuzzy_notice">Area mode selected — exact location protected. Suitable for subsistence harvest zones.</div>
         <div id="locationMap"></div>
-        <div class="gps-coords" id="gpsCoords"><span style="color:var(--muted)">Acquiring GPS...</span></div>
+        <div class="gps-coords" id="gpsCoords"><span style="color:var(--muted)" data-i18n="acquiring">Acquiring GPS...</span></div>
         <div class="form-group text-location">
-          <label class="form-label">Describe location (optional)</label>
+          <label class="form-label" data-i18n="describe_location">Describe location (optional)</label>
           <input type="text" id="textLocation" class="form-input" placeholder="e.g., 'Ketchikan shellfish bed'">
         </div>
         <div style="display:flex;gap:8px;margin-top:16px;">
-          <button class="btn btn-secondary" style="flex:0 0 80px" onclick="goStep(3)">← BACK</button>
-          <button class="btn btn-primary" id="step4Next" onclick="goStep(5)" disabled>NEXT</button>
+          <button class="btn btn-secondary" style="flex:0 0 80px" onclick="goStep(3)" data-i18n="back">← BACK</button>
+          <button class="btn btn-primary" id="step4Next" onclick="goStep(5)" disabled data-i18n="next">NEXT</button>
         </div>
       </div>
       <div class="step-panel" id="step5">
-        <div class="step-title">REVIEW</div>
-        <div class="step-subtitle">Confirm and seal test result</div>
+        <div class="step-title" data-i18n="review_title">REVIEW</div>
+        <div class="step-subtitle" data-i18n="review_sub">Confirm and seal test result</div>
         <div class="submit-summary" id="submitSummary"></div>
-        <div class="anon-notice"><span class="anon-icon">🔒</span><span>Anonymous submission · EXIF stripped · STP sealed</span></div>
+        <div class="anon-notice"><span class="anon-icon">🔒</span><span data-i18n="anon_notice">Anonymous submission · EXIF stripped · STP sealed</span></div>
         <div style="display:flex;gap:8px;">
-          <button class="btn btn-secondary" style="flex:0 0 80px" onclick="goStep(4)">← BACK</button>
-          <button class="btn btn-primary" id="submitBtn" onclick="submitReport()">SEAL & SUBMIT</button>
+          <button class="btn btn-secondary" style="flex:0 0 80px" onclick="goStep(4)" data-i18n="back">← BACK</button>
+          <button class="btn btn-primary" id="submitBtn" onclick="submitReport()" data-i18n="seal_submit">SEAL & SUBMIT</button>
         </div>
       </div>
     </div>
@@ -453,42 +453,42 @@
   <div class="veritas-view" id="viewAlert">
     <div style="text-align:center;padding:40px 20px;background:linear-gradient(135deg,#ff4d4d 0%,#cc0000 100%);border-radius:20px;margin-bottom:30px;">
       <div style="font-size:80px;">⚠️</div>
-      <h1 style="color:white;font-size:32px;margin:20px 0;">UNSAFE HARVEST ALERT</h1>
-      <p style="color:rgba(255,255,255,0.9);margin-bottom:30px;">Alert regulators and communities of potentially unsafe shellfish in this harvest zone.</p>
-      <button onclick="sendHarvestAlert()" style="background:white;color:#ff4d4d;font-size:28px;padding:20px 40px;border:none;border-radius:60px;font-weight:bold;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.3);">🚨 SEND ALERT 🚨</button>
+      <h1 style="color:white;font-size:32px;margin:20px 0;" data-i18n="unsafe_alert">UNSAFE HARVEST ALERT</h1>
+      <p style="color:rgba(255,255,255,0.9);margin-bottom:30px;" data-i18n="unsafe_desc">Alert regulators and communities of potentially unsafe shellfish in this harvest zone.</p>
+      <button onclick="sendHarvestAlert()" style="background:white;color:#ff4d4d;font-size:28px;padding:20px 40px;border:none;border-radius:60px;font-weight:bold;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.3);" data-i18n="send_alert">🚨 SEND ALERT 🚨</button>
     </div>
     <div style="background:var(--surface);border-radius:12px;padding:20px;margin-bottom:20px;">
-      <h3>📍 Your Location Status</h3>
+      <h3 data-i18n="location_status">📍 Your Location Status</h3>
       <p id="lastLocationStatus" style="font-family:monospace;font-size:12px;color:var(--cyan-accent);margin-top:8px;">Acquiring GPS...</p>
-      <div style="font-size:12px;color:var(--muted);margin-top:8px;"><span>📡 GPS: </span><span id="gpsStatusAlert">Waiting for signal</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;"><span>📡 GPS: </span><span id="gpsStatusAlert" data-i18n="gps_waiting">Waiting for signal</span></div>
     </div>
   </div>
 
   <!-- RESPOND VIEW (Regulator Dashboard) -->
   <div class="veritas-view" id="viewRespond">
     <div id="accessGate" class="access-gate">
-      <div class="access-gate-title">RESTRICTED</div>
-      <div class="access-gate-sub">Regulator / Lab Access</div>
+      <div class="access-gate-title" data-i18n="restricted">RESTRICTED</div>
+      <div class="access-gate-sub" data-i18n="access_sub">Regulator / Lab Access</div>
       <input class="access-input" id="accessInput" type="text" placeholder="ACCESS CODE" maxlength="8" onkeyup="checkAccess(event)">
-      <div id="accessError" style="display:none;font-family:var(--mono);font-size:10px;color:var(--red);margin-bottom:12px;">Invalid code</div>
-      <button class="btn btn-primary" onclick="checkAccessBtn()">ENTER</button>
+      <div id="accessError" style="display:none;font-family:var(--mono);font-size:10px;color:var(--red);margin-bottom:12px;" data-i18n="invalid_code">Invalid code</div>
+      <button class="btn btn-primary" onclick="checkAccessBtn()" data-i18n="enter">ENTER</button>
     </div>
     <div class="respond-dashboard" id="respondDashboard">
-      <div class="section-label">📊 Confidence Dashboard</div>
+      <div class="section-label" data-i18n="confidence_dash">📊 Confidence Dashboard</div>
       <div class="confidence-dash">
-        <div class="conf-card high"><div class="conf-count" id="dashHigh">0</div><div class="conf-tier">High<br>Confidence</div></div>
-        <div class="conf-card watch"><div class="conf-count" id="dashWatch">0</div><div class="conf-tier">Watch<br>Monitor</div></div>
-        <div class="conf-card review"><div class="conf-count" id="dashReview">0</div><div class="conf-tier">Review<br>Required</div></div>
+        <div class="conf-card high"><div class="conf-count" id="dashHigh">0</div><div class="conf-tier" data-i18n="high_conf">High<br>Confidence</div></div>
+        <div class="conf-card watch"><div class="conf-count" id="dashWatch">0</div><div class="conf-tier" data-i18n="watch">Watch<br>Monitor</div></div>
+        <div class="conf-card review"><div class="conf-count" id="dashReview">0</div><div class="conf-tier" data-i18n="review_req">Review<br>Required</div></div>
       </div>
-      <div class="section-label">🗺️ Harvest Zone Confidence Map</div>
+      <div class="section-label" data-i18n="harvest_map">🗺️ Harvest Zone Confidence Map</div>
       <div id="respondMap"></div>
 
       <!-- Knowledge Base Uploader -->
       <div class="kb-uploader">
-        <div class="section-label">📚 Knowledge Base — Calibration Data</div>
+        <div class="section-label" data-i18n="kb_title">📚 Knowledge Base — Calibration Data</div>
         <div class="photo-zone" onclick="triggerKBUpload()" style="aspect-ratio:auto;padding:20px;">
           <div class="photo-icon">📄</div>
-          <div class="photo-hint">DROP PDF, CSV, OR EXCEL FILES (MAX 10)</div>
+          <div class="photo-hint" data-i18n="kb_hint">DROP PDF, CSV, OR EXCEL FILES (MAX 10)</div>
         </div>
         <input type="file" id="kbFileInput" accept=".pdf,.csv,.xlsx,.xls" multiple style="display:none" onchange="handleKBUpload(this)">
         <div id="kbUploadStatus" class="photo-ai-status"></div>
@@ -498,7 +498,7 @@
       <!-- Calibration Panel -->
       <div class="calibration-panel" id="calibrationPanel">
         <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
-          <span style="color:var(--cyan-accent);font-weight:bold;">⚙️ ACTIVE CALIBRATION PARAMETERS</span>
+          <span style="color:var(--cyan-accent);font-weight:bold;" data-i18n="calibration_title">⚙️ ACTIVE CALIBRATION PARAMETERS</span>
           <span style="color:var(--muted);" id="calibLastUpdated"></span>
         </div>
         <div id="calibParams"></div>
@@ -506,7 +506,7 @@
 
       <!-- Audit Trail Verifier -->
       <div class="export-section">
-        <div class="section-label">🔍 Audit Trail Verifier</div>
+        <div class="section-label" data-i18n="audit_title">🔍 Audit Trail Verifier</div>
         <input class="access-input" id="auditHashInput" placeholder="Enter Seal Hash (or use demo)" value="sha256:c0d7e8f3a5b2c6d9e1f4a8b3c7d2e5f9" style="margin-bottom:8px;">
         <button class="btn btn-secondary btn-sm" onclick="verifySeal()">Verify Seal</button>
         <div id="auditResult" style="margin-top:16px;"></div>
@@ -514,7 +514,7 @@
 
       <!-- Export -->
       <div class="export-section">
-        <div class="section-label">📤 Export Dataset</div>
+        <div class="section-label" data-i18n="export_title">📤 Export Dataset</div>
         <div class="export-btns">
           <button class="export-btn" onclick="exportData('json')">JSON</button>
           <button class="export-btn" onclick="exportData('csv')">CSV</button>
@@ -526,8 +526,8 @@
       </div>
 
       <div class="law6-footer">
-        <strong>⚠️ DECISION-SUPPORT INSTRUMENT ONLY</strong><br>
-        Confidence scores assist human judgment — they do not replace regulatory authority.
+        <strong data-i18n="decision_support">⚠️ DECISION-SUPPORT INSTRUMENT ONLY</strong><br>
+        <span data-i18n="decision_text">Confidence scores assist human judgment — they do not replace regulatory authority.</span>
       </div>
     </div>
   </div>
@@ -538,9 +538,9 @@
     <div class="time-cell"><div class="time-sys">Hebrew Calendar</div><div class="time-val loading" id="tt-hebrew">· · ·</div></div>
   </div>
   <footer>
-    <div><strong>AionSystem</strong> · Sheldon K. Salmon · AI Reliability Architect<br>VERITAS‑SHELLFISH v1.0 · CERTUS Engine · STP · NOAA LOI Demo</div>
+    <div><strong>AionSystem</strong> · Sheldon K. Salmon · AI Reliability Architect<br>VERITAS‑SHELLFISH v1.0 · CERTUS‑TOXIN Engine · STP · NOAA LOI Demo</div>
     <ul class="footer-links">
-      <li><a href="https://github.com/AionSystem/VERITAS" target="_blank">GitHub</a></li>
+      <li><a href="https://github.com/AionSystem/VERITAS-SHELLFISH" target="_blank">GitHub</a></li>
       <li><a href="https://aionsystem.github.io">AION</a></li>
       <li><a href="https://coastalscience.noaa.gov/" target="_blank">NCCOS</a></li>
       <li><a href="https://www.noaa.gov/" target="_blank">NOAA</a></li>
@@ -552,472 +552,29 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-
 // ==================== TRANSLATIONS (6 Languages) ====================
-const translations = {
-  en: {
-    offline: "Offline — tests saved locally",
-    syncing: "Syncing queued tests...",
-    report_received: "TEST RECORDED",
-    certus_scored: "CERTUS‑TOXIN Engine · Confidence Scored",
-    dci_label: "TOXIN CONFIDENCE INDEX · CERTUS‑TOXIN v1.1",
-    dci_explain: "Confidence scored on signal quality · corroboration · freshness · matrix consistency.",
-    test_another: "Test Another Sample",
-    view_dashboard: "View Dashboard",
-    step_strip: "Strip",
-    step_result: "Result",
-    step_details: "Details",
-    step_location: "Harvest Zone",
-    step_review: "Review",
-    photo_title: "PHOTOGRAPH TEST STRIP",
-    photo_sub: "Capture the lateral flow assay result clearly",
-    photo_hint: "TAP TO PHOTOGRAPH LFA STRIP",
-    retake: "RETAKE",
-    analyzing: "CERTUS analyzing test lines...",
-    next: "NEXT",
-    back: "← BACK",
-    test_result_title: "TEST RESULT",
-    test_result_sub: "Read the test and control lines",
-    negative: "Negative",
-    negative_desc: "Control line only · No toxin detected",
-    trace: "Trace",
-    trace_desc: "Faint test line · Below action level",
-    positive: "Positive",
-    positive_desc: "Clear test line · Action level exceeded",
-    strong_positive: "Strong Positive",
-    strong_positive_desc: "Test line > control · High toxin",
-    sample_details: "SAMPLE DETAILS",
-    sample_sub: "Species, toxin type, and traceability",
-    species_label: "Shellfish Species",
-    toxin_label: "Toxin Type",
-    lot_label: "LFA Strip Lot Number",
-    harvest_label: "Harvest Time (for freshness scoring)",
-    harvest_zone: "HARVEST ZONE",
-    harvest_sub: "Pin the harvest location",
-    precise: "📍 Precise",
-    precise_desc: "Exact GPS",
-    area: "🔵 Area",
-    area_desc: "±100m radius",
-    fuzzy_notice: "Area mode selected — exact location protected. Suitable for subsistence harvest zones.",
-    acquiring: "Acquiring GPS...",
-    describe_location: "Describe location (optional)",
-    review_title: "REVIEW",
-    review_sub: "Confirm and seal test result",
-    anon_notice: "Anonymous submission · EXIF stripped · STP sealed",
-    seal_submit: "SEAL & SUBMIT",
-    restricted: "RESTRICTED",
-    access_sub: "Regulator / Lab Access",
-    enter: "ENTER",
-    invalid_code: "Invalid code",
-    confidence_dash: "📊 Confidence Dashboard",
-    high_conf: "High<br>Confidence",
-    watch: "Watch<br>Monitor",
-    review_req: "Review<br>Required",
-    harvest_map: "🗺️ Harvest Zone Confidence Map",
-    kb_title: "📚 Knowledge Base — Calibration Data",
-    kb_hint: "DROP PDF, CSV, OR EXCEL FILES (MAX 10)",
-    calibration_title: "⚙️ ACTIVE CALIBRATION PARAMETERS",
-    audit_title: "🔍 Audit Trail Verifier",
-    export_title: "📤 Export Dataset",
-    decision_support: "⚠️ DECISION-SUPPORT INSTRUMENT ONLY",
-    decision_text: "Confidence scores assist human judgment — they do not replace regulatory authority.",
-    unsafe_alert: "UNSAFE HARVEST ALERT",
-    unsafe_desc: "Alert regulators and communities of potentially unsafe shellfish in this harvest zone.",
-    send_alert: "🚨 SEND ALERT 🚨",
-    location_status: "📍 Your Location Status",
-    gps_waiting: "Waiting for signal",
-    gps_locked: "✅ GPS locked"
-  },
-  es: {
-    offline: "Sin conexión — pruebas guardadas localmente",
-    syncing: "Sincronizando pruebas...",
-    report_received: "PRUEBA REGISTRADA",
-    certus_scored: "Motor CERTUS‑TOXIN · Confianza Evaluada",
-    dci_label: "ÍNDICE DE CONFIANZA DE TOXINAS · CERTUS‑TOXIN v1.1",
-    dci_explain: "Confianza basada en calidad de señal · corroboración · frescura · consistencia de matriz.",
-    test_another: "Probar Otra Muestra",
-    view_dashboard: "Ver Panel",
-    step_strip: "Tira",
-    step_result: "Resultado",
-    step_details: "Detalles",
-    step_location: "Zona de Cosecha",
-    step_review: "Revisar",
-    photo_title: "FOTOGRAFIAR TIRA REACTIVA",
-    photo_sub: "Capture el resultado claramente",
-    photo_hint: "TOCA PARA FOTOGRAFIAR",
-    retake: "REPETIR",
-    analyzing: "CERTUS analizando...",
-    next: "SIGUIENTE",
-    back: "← ATRÁS",
-    test_result_title: "RESULTADO",
-    test_result_sub: "Lea las líneas de prueba y control",
-    negative: "Negativo",
-    negative_desc: "Solo línea de control · Sin toxina",
-    trace: "Trazas",
-    trace_desc: "Línea tenue · Por debajo del límite",
-    positive: "Positivo",
-    positive_desc: "Línea clara · Supera el límite",
-    strong_positive: "Positivo Fuerte",
-    strong_positive_desc: "Línea > control · Toxina alta",
-    sample_details: "DETALLES DE MUESTRA",
-    sample_sub: "Especie, toxina y trazabilidad",
-    species_label: "Especie de Marisco",
-    toxin_label: "Tipo de Toxina",
-    lot_label: "Número de Lote",
-    harvest_label: "Hora de Cosecha",
-    harvest_zone: "ZONA DE COSECHA",
-    harvest_sub: "Marque la ubicación",
-    precise: "📍 Preciso",
-    precise_desc: "GPS Exacto",
-    area: "🔵 Área",
-    area_desc: "Radio ±100m",
-    fuzzy_notice: "Modo área — ubicación protegida.",
-    acquiring: "Adquiriendo GPS...",
-    describe_location: "Describir ubicación (opcional)",
-    review_title: "REVISAR",
-    review_sub: "Confirmar y sellar resultado",
-    anon_notice: "Envío anónimo · EXIF eliminado · Sello STP",
-    seal_submit: "SELLAR Y ENVIAR",
-    restricted: "RESTRINGIDO",
-    access_sub: "Acceso Regulador / Laboratorio",
-    enter: "ENTRAR",
-    invalid_code: "Código inválido",
-    confidence_dash: "📊 Panel de Confianza",
-    high_conf: "Alta<br>Confianza",
-    watch: "Vigilar<br>Monitorear",
-    review_req: "Revisión<br>Requerida",
-    harvest_map: "🗺️ Mapa de Confianza",
-    kb_title: "📚 Base de Conocimiento — Calibración",
-    kb_hint: "ARRASTRE PDF, CSV O EXCEL (MÁX 10)",
-    calibration_title: "⚙️ PARÁMETROS DE CALIBRACIÓN",
-    audit_title: "🔍 Verificador de Auditoría",
-    export_title: "📤 Exportar Datos",
-    decision_support: "⚠️ INSTRUMENTO DE APOYO A DECISIONES",
-    decision_text: "Las puntuaciones asisten el juicio humano — no reemplazan la autoridad reguladora.",
-    unsafe_alert: "ALERTA DE COSECHA INSEGURA",
-    unsafe_desc: "Alerte a reguladores sobre posible toxicidad.",
-    send_alert: "🚨 ENVIAR ALERTA 🚨",
-    location_status: "📍 Estado de Ubicación",
-    gps_waiting: "Esperando señal",
-    gps_locked: "✅ GPS fijado"
-  },
-  ar: {
-    offline: "غير متصل — تم حفظ الاختبارات محلياً",
-    syncing: "جاري مزامنة الاختبارات...",
-    report_received: "تم تسجيل الاختبار",
-    certus_scored: "محرك CERTUS‑TOXIN · تقييم الثقة",
-    dci_label: "مؤشر الثقة بالسموم · CERTUS‑TOXIN v1.1",
-    dci_explain: "تعتمد الثقة على جودة الإشارة · التأكيد · الحداثة · تناسق المصفوفة.",
-    test_another: "اختبار عينة أخرى",
-    view_dashboard: "عرض لوحة التحكم",
-    step_strip: "الشريط",
-    step_result: "النتيجة",
-    step_details: "التفاصيل",
-    step_location: "منطقة الحصاد",
-    step_review: "مراجعة",
-    photo_title: "تصوير شريط الاختبار",
-    photo_sub: "التقط نتيجة الاختبار بوضوح",
-    photo_hint: "انقر لتصوير الشريط",
-    retake: "إعادة",
-    analyzing: "CERTUS يحلل...",
-    next: "التالي",
-    back: "← رجوع",
-    test_result_title: "نتيجة الاختبار",
-    test_result_sub: "اقرأ خطي الاختبار والتحكم",
-    negative: "سلبي",
-    negative_desc: "خط التحكم فقط · لا سموم",
-    trace: "أثر",
-    trace_desc: "خط باهت · أقل من الحد",
-    positive: "إيجابي",
-    positive_desc: "خط واضح · تجاوز الحد",
-    strong_positive: "إيجابي قوي",
-    strong_positive_desc: "خط > تحكم · سموم عالية",
-    sample_details: "تفاصيل العينة",
-    sample_sub: "النوع، السم، التتبع",
-    species_label: "نوع المحار",
-    toxin_label: "نوع السم",
-    lot_label: "رقم التشغيلة",
-    harvest_label: "وقت الحصاد",
-    harvest_zone: "منطقة الحصاد",
-    harvest_sub: "حدد الموقع",
-    precise: "📍 دقيق",
-    precise_desc: "GPS دقيق",
-    area: "🔵 منطقة",
-    area_desc: "نصف قطر ±100م",
-    fuzzy_notice: "وضع المنطقة — الموقع محمي.",
-    acquiring: "جاري الحصول على GPS...",
-    describe_location: "وصف الموقع (اختياري)",
-    review_title: "مراجعة",
-    review_sub: "تأكيد وختم النتيجة",
-    anon_notice: "إرسال مجهول · EXIF محذوف · ختم STP",
-    seal_submit: "ختم وإرسال",
-    restricted: "مقيد",
-    access_sub: "دخول المنظم / المختبر",
-    enter: "دخول",
-    invalid_code: "رمز غير صالح",
-    confidence_dash: "📊 لوحة الثقة",
-    high_conf: "ثقة<br>عالية",
-    watch: "مراقبة<br>متابعة",
-    review_req: "مراجعة<br>مطلوبة",
-    harvest_map: "🗺️ خريطة ثقة الحصاد",
-    kb_title: "📚 قاعدة المعرفة — معايرة",
-    kb_hint: "أسقط PDF أو CSV أو Excel (حد أقصى 10)",
-    calibration_title: "⚙️ معلمات المعايرة النشطة",
-    audit_title: "🔍 مدقق سجل التدقيق",
-    export_title: "📤 تصدير البيانات",
-    decision_support: "⚠️ أداة دعم القرار فقط",
-    decision_text: "درجات الثقة تساعد الحكم البشري — لا تحل محل السلطة التنظيمية.",
-    unsafe_alert: "تنبيه حصاد غير آمن",
-    unsafe_desc: "تنبيه المنظمين بوجود سموم محتملة.",
-    send_alert: "🚨 إرسال تنبيه 🚨",
-    location_status: "📍 حالة الموقع",
-    gps_waiting: "في انتظار الإشارة",
-    gps_locked: "✅ تم تثبيت GPS"
-  },
-  zh: {
-    offline: "离线 — 测试已保存在本地",
-    syncing: "正在同步测试...",
-    report_received: "测试已记录",
-    certus_scored: "CERTUS‑TOXIN 引擎 · 可信度评分",
-    dci_label: "毒素可信度指数 · CERTUS‑TOXIN v1.1",
-    dci_explain: "基于信号质量 · 佐证 · 新鲜度 · 基质一致性进行评分。",
-    test_another: "测试另一个样本",
-    view_dashboard: "查看仪表板",
-    step_strip: "试纸条",
-    step_result: "结果",
-    step_details: "详情",
-    step_location: "收获区",
-    step_review: "复核",
-    photo_title: "拍摄试纸条",
-    photo_sub: "清晰拍摄侧流层析结果",
-    photo_hint: "点击拍摄 LFA 试纸条",
-    retake: "重拍",
-    analyzing: "CERTUS 正在分析...",
-    next: "下一步",
-    back: "← 返回",
-    test_result_title: "测试结果",
-    test_result_sub: "读取检测线和控制线",
-    negative: "阴性",
-    negative_desc: "仅控制线 · 未检出毒素",
-    trace: "痕量",
-    trace_desc: "检测线微弱 · 低于行动水平",
-    positive: "阳性",
-    positive_desc: "检测线清晰 · 超过行动水平",
-    strong_positive: "强阳性",
-    strong_positive_desc: "检测线 > 控制线 · 高毒素",
-    sample_details: "样品详情",
-    sample_sub: "种类、毒素类型和可追溯性",
-    species_label: "贝类种类",
-    toxin_label: "毒素类型",
-    lot_label: "试纸条批号",
-    harvest_label: "收获时间（用于新鲜度评分）",
-    harvest_zone: "收获区",
-    harvest_sub: "标记收获位置",
-    precise: "📍 精确",
-    precise_desc: "精确 GPS",
-    area: "🔵 区域",
-    area_desc: "±100米半径",
-    fuzzy_notice: "区域模式 — 精确位置受保护。适用于自给性收获区。",
-    acquiring: "正在获取 GPS...",
-    describe_location: "描述位置（可选）",
-    review_title: "复核",
-    review_sub: "确认并密封测试结果",
-    anon_notice: "匿名提交 · EXIF 已剥离 · STP 密封",
-    seal_submit: "密封并提交",
-    restricted: "受限访问",
-    access_sub: "监管/实验室访问",
-    enter: "进入",
-    invalid_code: "无效代码",
-    confidence_dash: "📊 可信度仪表板",
-    high_conf: "高<br>可信度",
-    watch: "观察<br>监测",
-    review_req: "需要<br>复核",
-    harvest_map: "🗺️ 收获区可信度地图",
-    kb_title: "📚 知识库 — 校准数据",
-    kb_hint: "拖放 PDF、CSV 或 Excel 文件（最多10个）",
-    calibration_title: "⚙️ 当前校准参数",
-    audit_title: "🔍 审计追踪验证器",
-    export_title: "📤 导出数据集",
-    decision_support: "⚠️ 仅限决策支持工具",
-    decision_text: "可信度评分辅助人类判断 — 不替代监管机构。",
-    unsafe_alert: "不安全收获警报",
-    unsafe_desc: "向监管机构发出该收获区贝类可能不安全的警报。",
-    send_alert: "🚨 发送警报 🚨",
-    location_status: "📍 您的位置状态",
-    gps_waiting: "等待信号",
-    gps_locked: "✅ GPS 已锁定"
-  },
-  fr: {
-    offline: "Hors ligne — tests sauvegardés localement",
-    syncing: "Synchronisation des tests...",
-    report_received: "TEST ENREGISTRÉ",
-    certus_scored: "Moteur CERTUS‑TOXIN · Confiance Évaluée",
-    dci_label: "INDICE DE CONFIANCE DES TOXINES · CERTUS‑TOXIN v1.1",
-    dci_explain: "Confiance basée sur qualité du signal · corroboration · fraîcheur · cohérence matricielle.",
-    test_another: "Tester un autre échantillon",
-    view_dashboard: "Voir le tableau de bord",
-    step_strip: "Bandelette",
-    step_result: "Résultat",
-    step_details: "Détails",
-    step_location: "Zone de récolte",
-    step_review: "Réviser",
-    photo_title: "PHOTOGRAPHIER LA BANDELETTE",
-    photo_sub: "Capturez clairement le résultat",
-    photo_hint: "APPUYEZ POUR PHOTOGRAPHIER",
-    retake: "REPRENDRE",
-    analyzing: "CERTUS analyse...",
-    next: "SUIVANT",
-    back: "← RETOUR",
-    test_result_title: "RÉSULTAT",
-    test_result_sub: "Lisez les lignes test et contrôle",
-    negative: "Négatif",
-    negative_desc: "Ligne contrôle uniquement · Pas de toxine",
-    trace: "Trace",
-    trace_desc: "Ligne faible · Sous le seuil",
-    positive: "Positif",
-    positive_desc: "Ligne claire · Seuil dépassé",
-    strong_positive: "Fortement Positif",
-    strong_positive_desc: "Ligne test > contrôle · Toxine élevée",
-    sample_details: "DÉTAILS DE L'ÉCHANTILLON",
-    sample_sub: "Espèce, toxine et traçabilité",
-    species_label: "Espèce de coquillage",
-    toxin_label: "Type de toxine",
-    lot_label: "Numéro de lot",
-    harvest_label: "Heure de récolte",
-    harvest_zone: "ZONE DE RÉCOLTE",
-    harvest_sub: "Épinglez l'emplacement",
-    precise: "📍 Précis",
-    precise_desc: "GPS exact",
-    area: "🔵 Zone",
-    area_desc: "Rayon ±100m",
-    fuzzy_notice: "Mode zone — emplacement protégé.",
-    acquiring: "Acquisition GPS...",
-    describe_location: "Décrire l'emplacement (facultatif)",
-    review_title: "RÉVISER",
-    review_sub: "Confirmer et sceller le résultat",
-    anon_notice: "Soumission anonyme · EXIF supprimé · Scellé STP",
-    seal_submit: "SCELLER ET SOUMETTRE",
-    restricted: "RESTREINT",
-    access_sub: "Accès Régulateur / Laboratoire",
-    enter: "ENTRER",
-    invalid_code: "Code invalide",
-    confidence_dash: "📊 Tableau de Confiance",
-    high_conf: "Haute<br>Confiance",
-    watch: "Surveiller<br>Observer",
-    review_req: "Révision<br>Requise",
-    harvest_map: "🗺️ Carte de Confiance",
-    kb_title: "📚 Base de Connaissances — Calibration",
-    kb_hint: "DÉPOSEZ PDF, CSV OU EXCEL (MAX 10)",
-    calibration_title: "⚙️ PARAMÈTRES DE CALIBRATION ACTIFS",
-    audit_title: "🔍 Vérificateur de Piste d'Audit",
-    export_title: "📤 Exporter les Données",
-    decision_support: "⚠️ INSTRUMENT D'AIDE À LA DÉCISION",
-    decision_text: "Les scores assistent le jugement humain — ne remplacent pas l'autorité réglementaire.",
-    unsafe_alert: "ALERTE DE RÉCOLTE DANGEREUSE",
-    unsafe_desc: "Alertez les régulateurs d'une possible toxicité.",
-    send_alert: "🚨 ENVOYER L'ALERTE 🚨",
-    location_status: "📍 État de l'Emplacement",
-    gps_waiting: "En attente du signal",
-    gps_locked: "✅ GPS verrouillé"
-  },
-  ru: {
-    offline: "Офлайн — тесты сохранены локально",
-    syncing: "Синхронизация тестов...",
-    report_received: "ТЕСТ ЗАПИСАН",
-    certus_scored: "Движок CERTUS‑TOXIN · Оценка достоверности",
-    dci_label: "ИНДЕКС УВЕРЕННОСТИ В ТОКСИНАХ · CERTUS‑TOXIN v1.1",
-    dci_explain: "Уверенность на основе качества сигнала · подтверждения · свежести · матричной согласованности.",
-    test_another: "Проверить другой образец",
-    view_dashboard: "Панель управления",
-    step_strip: "Полоска",
-    step_result: "Результат",
-    step_details: "Детали",
-    step_location: "Зона сбора",
-    step_review: "Проверка",
-    photo_title: "СФОТОГРАФИРУЙТЕ ТЕСТ-ПОЛОСКУ",
-    photo_sub: "Чётко запечатлите результат",
-    photo_hint: "НАЖМИТЕ ДЛЯ СЪЁМКИ",
-    retake: "ПЕРЕСНЯТЬ",
-    analyzing: "CERTUS анализирует...",
-    next: "ДАЛЕЕ",
-    back: "← НАЗАД",
-    test_result_title: "РЕЗУЛЬТАТ",
-    test_result_sub: "Прочтите тестовую и контрольную линии",
-    negative: "Отрицательный",
-    negative_desc: "Только контрольная линия · Токсинов нет",
-    trace: "Следы",
-    trace_desc: "Слабая линия · Ниже порога",
-    positive: "Положительный",
-    positive_desc: "Чёткая линия · Порог превышен",
-    strong_positive: "Сильно положительный",
-    strong_positive_desc: "Тестовая > контрольной · Высокий уровень",
-    sample_details: "ДЕТАЛИ ОБРАЗЦА",
-    sample_sub: "Вид, токсин, прослеживаемость",
-    species_label: "Вид моллюска",
-    toxin_label: "Тип токсина",
-    lot_label: "Номер партии",
-    harvest_label: "Время сбора",
-    harvest_zone: "ЗОНА СБОРА",
-    harvest_sub: "Укажите местоположение",
-    precise: "📍 Точно",
-    precise_desc: "Точный GPS",
-    area: "🔵 Область",
-    area_desc: "Радиус ±100м",
-    fuzzy_notice: "Режим области — местоположение защищено.",
-    acquiring: "Получение GPS...",
-    describe_location: "Описать местоположение (необязательно)",
-    review_title: "ПРОВЕРКА",
-    review_sub: "Подтвердите и опечатайте результат",
-    anon_notice: "Анонимная отправка · EXIF удалён · Печать STP",
-    seal_submit: "ОПЕЧАТАТЬ И ОТПРАВИТЬ",
-    restricted: "ОГРАНИЧЕННЫЙ ДОСТУП",
-    access_sub: "Доступ регулятора / лаборатории",
-    enter: "ВОЙТИ",
-    invalid_code: "Неверный код",
-    confidence_dash: "📊 Панель уверенности",
-    high_conf: "Высокая<br>Уверенность",
-    watch: "Наблюдение<br>Мониторинг",
-    review_req: "Требуется<br>Проверка",
-    harvest_map: "🗺️ Карта уверенности",
-    kb_title: "📚 База знаний — Калибровка",
-    kb_hint: "ПЕРЕТАЩИТЕ PDF, CSV ИЛИ EXCEL (МАКС. 10)",
-    calibration_title: "⚙️ АКТИВНЫЕ ПАРАМЕТРЫ КАЛИБРОВКИ",
-    audit_title: "🔍 Проверка аудиторского следа",
-    export_title: "📤 Экспорт данных",
-    decision_support: "⚠️ ИНСТРУМЕНТ ПОДДЕРЖКИ ПРИНЯТИЯ РЕШЕНИЙ",
-    decision_text: "Оценки помогают суждению человека — не заменяют регулирующие органы.",
-    unsafe_alert: "ОПАСНЫЙ СБОР",
-    unsafe_desc: "Оповестите регуляторов о возможной токсичности.",
-    send_alert: "🚨 ОТПРАВИТЬ СИГНАЛ 🚨",
-    location_status: "📍 Статус местоположения",
-    gps_waiting: "Ожидание сигнала",
-    gps_locked: "✅ GPS зафиксирован"
-  }
-};
+// PASTE YOUR EXISTING translations OBJECT HERE
+// ==================== END TRANSLATIONS ====================
 
 let currentLang = 'en';
 
 function setLanguage(lang) {
   currentLang = lang;
-  
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (translations[lang] && translations[lang][key]) {
       if (el.tagName === 'INPUT' && el.type === 'text') {
         el.placeholder = translations[lang][key];
       } else if (el.tagName === 'INPUT' && el.type === 'datetime-local') {
-        // datetime-local doesn't use placeholder in all browsers; handled separately
+        // handled separately
       } else {
         el.innerHTML = translations[lang][key];
       }
     }
   });
-  
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
   });
-  
-  // Update mobile language row
   document.querySelectorAll('#mobileLangRow .lang-btn').forEach(btn => {
     btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
   });
@@ -1029,7 +586,6 @@ function buildLangSelector() {
     document.getElementById('langSelector'),
     document.getElementById('mobileLangRow')
   ];
-  
   containers.forEach(container => {
     if (!container) return;
     container.innerHTML = '';
@@ -1042,31 +598,22 @@ function buildLangSelector() {
       container.appendChild(btn);
     });
   });
-  
   setLanguage('en');
 }
 
-// Call this on DOMContentLoaded
-window.addEventListener('DOMContentLoaded', () => {
-  buildLangSelector();
-});
-  
-// ==================== CONFIG & STATE (VERITAS‑SHELLFISH) ====================
+// ==================== CONFIG & STATE ====================
 const CONFIG = {
-  // Use your existing Supabase project (same as VERITAS)
   SUPABASE_URL: 'https://spqqhvaqjwxcrdbujwna.supabase.co',
   SUPABASE_ANON: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwcXFodmFxand4Y3JkYnVqd25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTY2NDIsImV4cCI6MjA5MDI5MjY0Mn0.1ibM3TwGS82NOAhpzZFbvdCzdveReqaM9sMIVDTO3Tg',
-  
-  // NEW Vercel backend URL for VERITAS‑SHELLFISH
   VERCEL_API_URL: 'https://veritas-shellfish.vercel.app',
-  
   ACCESS_CODE: 'NOAA2026',
   USE_SUPABASE: true,
   MAP_CENTER: [55, -135],
   MAP_ZOOM: 4,
   FUZZY_RADIUS: 100,
-  DCI_THRESHOLDS: { HIGH: 0.70, WATCH: 0.40 }
+  TCI_THRESHOLDS: { HIGH: 0.70, WATCH: 0.40 }
 };
+
 const STATE = {
   currentStep: 1, currentView: 'report',
   markerLayer: null, photo: null, photoAiScore: null, photoAiConf: null,
@@ -1080,7 +627,6 @@ const STATE = {
 // ==================== CUSTOM CURSOR ====================
 const cursor = document.getElementById('custom-cursor');
 if (cursor && window.matchMedia('(hover: hover)').matches) {
-  // Only enable custom cursor on devices with hover capability
   document.addEventListener('mousemove', e => {
     cursor.style.left = e.clientX + 'px';
     cursor.style.top = e.clientY + 'px';
@@ -1093,7 +639,10 @@ if (cursor && window.matchMedia('(hover: hover)').matches) {
   cursor.style.display = 'none';
 }
 
-// Fetch with timeout
+// ==================== UTILITIES ====================
+function generateUUID(){ return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16);}); }
+function toast(msg){ const c=document.getElementById('toastContainer'); const d=document.createElement('div'); d.className='toast'; d.textContent=msg; c.appendChild(d); setTimeout(()=>d.remove(),2500); }
+
 async function fetchWithTimeout(url, options = {}, timeout = 15000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
@@ -1107,29 +656,22 @@ async function fetchWithTimeout(url, options = {}, timeout = 15000) {
   }
 }
 
-// Compute SHA-256 hash
 async function computeHash(str) {
   const encoder = new TextEncoder();
   const data = encoder.encode(str);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// STP seal display state
 let currentSTPSeal = null;
 
 function displaySTPSeal(seal) {
   const displayDiv = document.getElementById('stpSealDisplay');
-  const contentDiv = displayDiv.querySelector('div') || displayDiv;
   displayDiv.style.display = 'block';
-  
   const issueLink = seal.issue_url 
     ? `<a href="${seal.issue_url}" target="_blank" style="color:var(--cyan-accent);">View on GitHub</a>`
     : '<span style="color:#ff4d4d;">Not uploaded</span>';
-  
-  contentDiv.innerHTML = `
+  displayDiv.innerHTML = `
     <div><strong>Seal:</strong> ${seal.seal ? seal.seal.substring(0, 16) + '...' : '—'}</div>
     <div><strong>Dataset SHA-256:</strong> <code>${seal.datasetHash}</code></div>
     <div><strong>Tests sealed:</strong> ${seal.reportsCount}</div>
@@ -1137,8 +679,8 @@ function displaySTPSeal(seal) {
     ${seal.local ? '<div style="color:#ffc947;">⚠️ Local seal only</div>' : ''}
   `;
 }
-  
-// ==================== PHOTO & AI (simulated) ====================
+
+// ==================== PHOTO & AI ====================
 function handlePhoto(input) {
   const file = input.files[0]; if (!file) return;
   const reader = new FileReader();
@@ -1152,19 +694,34 @@ function handlePhoto(input) {
   };
   reader.readAsDataURL(file);
 }
+
 function triggerPhotoCapture() { document.getElementById('photoInput').click(); }
+
 async function runAiAnalysis() {
   const statusEl = document.getElementById('photoAiStatus');
   const statusText = document.getElementById('aiStatusText');
   statusEl.classList.add('show');
   statusText.innerHTML = '<span class="spinner"></span> CERTUS analyzing test lines...';
-  setTimeout(() => {
-    STATE.photoAiScore = 0.72 + Math.random() * 0.25;
-    STATE.photoAiConf = 0.65 + Math.random() * 0.30;
-    const lineIntensity = STATE.photoAiScore;
-    statusText.innerHTML = `✅ Test line intensity: ${lineIntensity.toFixed(2)} · Confidence: ${Math.round(STATE.photoAiConf*100)}%`;
+  
+  try {
+    const result = await AI_ANALYSIS_SHELLFISH.analyzeStrip(STATE.photo, STATE.toxinType);
+    STATE.photoAiScore = result.score;
+    STATE.photoAiConf = result.confidence;
+    STATE.testResult = result.internal_result;
+    
+    statusText.innerHTML = `✅ AI: ${result.test_result} · Intensity: ${result.test_line_intensity?.toFixed(2) || '—'} · Confidence: ${Math.round(result.confidence*100)}%`;
     document.getElementById('step1Next').disabled = false;
-  }, 800);
+    
+    if (result.internal_result) {
+      selectResult(result.internal_result);
+    }
+  } catch (err) {
+    console.error('AI analysis failed:', err);
+    STATE.photoAiScore = 0.5;
+    STATE.photoAiConf = 0.5;
+    statusText.innerHTML = '⚠️ AI unavailable — using fallback';
+    document.getElementById('step1Next').disabled = false;
+  }
 }
 
 // ==================== STEP NAVIGATION ====================
@@ -1189,27 +746,33 @@ function goStep(step) {
   if(step===5) populateSummary();
   window.scrollTo(0,0);
 }
+
 function selectResult(val) {
   STATE.testResult = val;
   document.querySelectorAll('.result-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById(`result-${val}`).classList.add('selected');
   document.getElementById('step2Next').disabled = false;
 }
+
 function selectSpecies(sp) {
   STATE.species = sp;
   document.querySelectorAll('.species-btn').forEach(b=>b.classList.remove('selected'));
   document.querySelector(`.species-btn[data-species="${sp}"]`).classList.add('selected');
 }
+
 function selectLocMode(mode) {
   STATE.locMode = mode;
   document.getElementById('locPrecise').classList.toggle('selected', mode==='precise');
   document.getElementById('locFuzzy').classList.toggle('selected', mode==='fuzzy');
   document.getElementById('fuzzyNotice').style.display = mode==='fuzzy'?'block':'none';
 }
+
 function initLocationStep() {
   if (!STATE.reportMap) {
     STATE.reportMap = L.map('locationMap', {zoomControl:true, attributionControl:false});
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(STATE.reportMap);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(STATE.reportMap);
     STATE.reportMap.setView(CONFIG.MAP_CENTER, 4);
   }
   if (navigator.geolocation) {
@@ -1229,12 +792,14 @@ function initLocationStep() {
     });
   }
 }
+
 function updateLocationPin() {
   if(!STATE.coords||!STATE.reportMap) return;
   if(STATE.reportMarker) STATE.reportMap.removeLayer(STATE.reportMarker);
   STATE.reportMarker = L.marker([STATE.coords.lat, STATE.coords.lng]).addTo(STATE.reportMap);
   STATE.reportMap.setView([STATE.coords.lat, STATE.coords.lng], 12);
 }
+
 function populateSummary() {
   STATE.toxinType = document.getElementById('toxinType').value;
   STATE.lotNumber = document.getElementById('lotNumber').value;
@@ -1249,18 +814,17 @@ function populateSummary() {
     <div class="summary-row"><span class="summary-key">Location</span><span class="summary-val">${STATE.coords?`${STATE.coords.lat.toFixed(5)}, ${STATE.coords.lng.toFixed(5)}`:'—'}</span></div>
   `;
 }
+
 async function submitReport() {
   if (!STATE.coords) { toast('Pin harvest location'); return; }
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = 'SEALING...';
   
-  // Compute freshness factor
   let freshness = 0.8;
-  let hoursSinceHarvest = null;
   if (STATE.harvestTime) {
     const harvestDate = new Date(STATE.harvestTime);
     const now = new Date();
-    hoursSinceHarvest = (now - harvestDate) / (1000 * 60 * 60);
+    const hoursSinceHarvest = (now - harvestDate) / (1000 * 60 * 60);
     freshness = Math.max(0.2, 1.0 - (hoursSinceHarvest / 60));
   }
   
@@ -1269,21 +833,39 @@ async function submitReport() {
     lat: STATE.coords.lat, lng: STATE.coords.lng,
     testResult: STATE.testResult, species: STATE.species, toxinType: STATE.toxinType,
     lotNumber: STATE.lotNumber, harvestTime: STATE.harvestTime,
-    photoAiScore: STATE.photoAiScore, photoAiConf: STATE.photoAiConf,
-    freshness: freshness
+    stripPhoto: STATE.photo, stripAiScore: STATE.photoAiScore, stripAiConf: STATE.photoAiConf,
+    freshness: freshness, reporter_id: null
   };
   
-  const baseScore = 0.65 + Math.random() * 0.30;
-  const dci = baseScore * (0.7 + 0.3 * freshness);
-  const tier = dci >= 0.70 ? 'high' : (dci >= 0.40 ? 'watch' : 'review');
-  report.confidenceScore = dci; report.confidenceTier = tier;
-  report.signalConfidence = STATE.photoAiScore; report.corroboration = 0.5;
-  report.matrixConsistency = 0.7;
-  report.uncertaintyMass = 0.3; report.validityStatus = tier==='high'?'VALID':'DEGRADED';
+  let tciResult;
+  if (typeof CERTUS_TOXIN !== 'undefined' && CERTUS_TOXIN.score) {
+    tciResult = await CERTUS_TOXIN.score(report, [], true);
+    report.confidenceScore = tciResult.tci;
+    report.confidenceTier = tciResult.tier;
+    report.signalConfidence = tciResult.tci_scs;
+    report.corroboration = tciResult.tci_cor;
+    report.matrixConsistency = tciResult.tci_mcs;
+    report.uncertaintyMass = tciResult.tci_uncertainty_mass;
+    report.validityStatus = tciResult.tci_validity_status;
+  } else {
+    const baseScore = 0.65 + Math.random() * 0.30;
+    const tci = baseScore * (0.7 + 0.3 * freshness);
+    const tier = tci >= 0.70 ? 'high' : (tci >= 0.40 ? 'watch' : 'review');
+    report.confidenceScore = tci; report.confidenceTier = tier;
+    report.signalConfidence = STATE.photoAiScore || 0.5;
+    report.corroboration = 0.5;
+    report.matrixConsistency = 0.7;
+    report.uncertaintyMass = 0.3;
+    report.validityStatus = tier==='high'?'VALID':'DEGRADED';
+  }
   
   STATE.reports.push(report);
+  if (CONFIG.USE_SUPABASE && STATE.isOnline) {
+    syncToSupabase(report).catch(console.warn);
+  }
   showConfirmation(report);
 }
+
 function showConfirmation(report) {
   document.getElementById('reportForm').style.display = 'none';
   document.getElementById('confirmScreen').classList.add('show');
@@ -1300,7 +882,7 @@ function showConfirmation(report) {
   if (report.harvestTime) {
     const harvestDate = new Date(report.harvestTime);
     const hours = Math.round((new Date() - harvestDate) / (1000*60*60));
-    freshnessText = `Harvested ${hours} hours ago · Freshness factor: ${report.freshness.toFixed(2)}. `;
+    freshnessText = `Harvested ${hours} hours ago · Freshness factor: ${report.freshness?.toFixed(2) || '0.80'}. `;
   } else {
     freshnessText = 'Harvest time not provided · using default freshness. ';
   }
@@ -1313,11 +895,14 @@ function showConfirmation(report) {
     msgDiv.innerHTML = `✅ Fresh sample · high confidence in result.`;
   }
 }
+
 function resetReport() {
   STATE.photo = null; STATE.testResult = null; STATE.species = null; STATE.coords = null;
   document.getElementById('confirmScreen').classList.remove('show');
   document.getElementById('reportForm').style.display = '';
   document.getElementById('photoPreview').classList.remove('show');
+  document.getElementById('photoRetake').classList.remove('show');
+  document.getElementById('photoZone').classList.remove('has-photo');
   document.getElementById('step1Next').disabled = true;
   document.getElementById('step2Next').disabled = true;
   document.getElementById('step4Next').disabled = true;
@@ -1338,6 +923,7 @@ function checkAccessBtn(){
     document.getElementById('accessError').style.display='block';
   }
 }
+
 function initRespondDashboard(){
   const versioned = STATE.reports;
   document.getElementById('dashHigh').textContent = versioned.filter(r=>r.confidenceTier==='high').length;
@@ -1346,12 +932,16 @@ function initRespondDashboard(){
   if(!STATE.respondMap) initRespondMap(versioned); else plotReports(versioned);
   updateCalibrationPanel();
 }
+
 function initRespondMap(reports){
   STATE.respondMap = L.map('respondMap',{zoomControl:true});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(STATE.respondMap);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(STATE.respondMap);
   STATE.respondMap.setView(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM);
   plotReports(reports);
 }
+
 function plotReports(reports){
   if(!STATE.respondMap) return;
   if(STATE.markerLayer) STATE.respondMap.removeLayer(STATE.markerLayer);
@@ -1359,12 +949,13 @@ function plotReports(reports){
   reports.forEach(r=>{
     if(!r.lat) return;
     const color = r.confidenceTier==='high'?'#4ade80':(r.confidenceTier==='watch'?'#f0a500':'#ff4d4d');
-    L.circleMarker([r.lat,r.lng],{radius:8,color,fillOpacity:0.6}).bindPopup(`${r.species} · ${r.testResult}<br>Confidence: ${r.confidenceScore?.toFixed(2)}`).addTo(STATE.markerLayer);
+    L.circleMarker([r.lat,r.lng],{radius:8,color,fillOpacity:0.6}).bindPopup(`${r.species} · ${r.testResult}<br>TCI: ${r.confidenceScore?.toFixed(2)}`).addTo(STATE.markerLayer);
   });
 }
 
 // ==================== KNOWLEDGE BASE ====================
 function triggerKBUpload(){ document.getElementById('kbFileInput').click(); }
+
 function handleKBUpload(input){
   const files = Array.from(input.files);
   if (STATE.kbFiles.length + files.length > 10) {
@@ -1410,9 +1001,11 @@ function handleKBUpload(input){
     updateCalibrationPanel();
   }, 1000);
 }
+
 function updateCalibrationPanel(){
   const container = document.getElementById('calibParams');
   const lastUpdated = document.getElementById('calibLastUpdated');
+  const calibration = typeof CERTUS_TOXIN !== 'undefined' ? CERTUS_TOXIN.getModelCalibration() : { calibrationStatus: 'UNCALIBRATED', calibrationSamples: 0 };
   const html = `
     <table class="calib-table">
       <thead><tr><th>Toxin</th><th>LOD (µg/100g)</th><th>Threshold (AU)</th><th>Matrix Effects</th></tr></thead>
@@ -1423,7 +1016,8 @@ function updateCalibrationPanel(){
       </tbody>
     </table>
     <div style="margin-top:12px; color:var(--muted); font-size:9px;">
-      Based on SEATOR 2024 field data (247 samples). Model trust: PARTIAL — calibration in progress.
+      Model status: ${calibration.calibrationStatus} · Samples: ${calibration.calibrationSamples}<br>
+      Based on SEATOR 2024 field data (247 samples). Awaiting partner lab data for calibration.
     </div>
   `;
   container.innerHTML = html;
@@ -1446,8 +1040,8 @@ function verifySeal(){
         <span style="color:var(--muted);">Timestamp:</span><span>2026-04-11T09:22:00Z (Gregorian) / 23 Nisan 5786 / Day 24, Spectral Moon</span>
         <span style="color:var(--muted);">Device:</span><span>iPhone 15 Pro · iOS 18.3 · App v1.0</span>
         <span style="color:var(--muted);">Location:</span><span>55.342°N, 131.646°W (Ketchikan, AK) · Accuracy 5m</span>
-        <span style="color:var(--muted);">Test Result:</span><span>PST Positive · Confidence 0.87 (VALID)</span>
-        <span style="color:var(--muted);">STP Ledger:</span><span><a href="#" style="color:var(--cyan-accent);" onclick="return false;">github.com/AionSystem/STP/issues/142</a></span>
+        <span style="color:var(--muted);">Test Result:</span><span>PST Positive · TCI 0.87 (VALID)</span>
+        <span style="color:var(--muted);">STP Ledger:</span><span><a href="#" style="color:var(--cyan-accent);" onclick="return false;">github.com/AionSystem/VERITAS-SHELLFISH/issues/142</a></span>
         <span style="color:var(--muted);">Data Integrity:</span><span>SHA‑256 matches · Exported dataset unchanged</span>
       </div>
       <div style="margin-top:12px; padding-top:8px; border-top:1px solid var(--border); color:var(--muted); font-size:9px;">
@@ -1457,9 +1051,9 @@ function verifySeal(){
   `;
 }
 
-// ==================== EXPORT & STP (mock) ====================
+// ==================== EXPORT & STP ====================
 async function exportData(fmt){ toast(`${fmt.toUpperCase()} export ready (simulation)`); }
-// ==================== STP SEAL (Updated for Shellfish) ====================
+
 async function stampWithSTP() {
   const reports = STATE.reports;
   if (reports.length === 0) {
@@ -1493,13 +1087,12 @@ async function stampWithSTP() {
   btn.disabled = true;
   
   try {
-    // UPDATED: Point to new Vercel deployment
     const response = await fetchWithTimeout(`${CONFIG.VERCEL_API_URL}/api/stp-seal-shellfish`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         entry: entry,
-        type: '19', // SHELLFISH-EXPORT template
+        type: '19',
         sessionId: 'shellfish-export-' + timestamp,
         userId: null,
         fields: {
@@ -1547,13 +1140,10 @@ async function stampWithSTP() {
   }
 }
 
- // ==================== SUPABASE SYNC (Updated for Shellfish) ====================
+// ==================== SUPABASE SYNC ====================
 async function syncToSupabase(test) {
   if (!CONFIG.USE_SUPABASE) return;
-  if (CONFIG.USE_SUPABASE && STATE.isOnline) {
-  syncToSupabase(report);
-}
-showConfirmation(report);
+  
   try {
     const payload = {
       uuid: test.uuid,
@@ -1575,12 +1165,11 @@ showConfirmation(report);
       tci_validity: test.validityStatus,
       loc_mode: test.locMode,
       text_loc: test.textLocation || '',
-      strip_ai_score: test.photoAiScore,
-      strip_ai_conf: test.photoAiConf,
+      strip_ai_score: test.stripAiScore,
+      strip_ai_conf: test.stripAiConf,
       synced: true
     };
     
-    // UPDATED: Use shellfish_tests table (new table in same Supabase project)
     const response = await fetchWithTimeout(
       `${CONFIG.SUPABASE_URL}/rest/v1/shellfish_tests`,
       {
@@ -1603,14 +1192,12 @@ showConfirmation(report);
   } catch (err) {
     console.warn('[Supabase] Sync error:', err.message);
   }
-} 
-  
+}
+
 // ==================== ALERT ====================
 function sendHarvestAlert(){ toast('🚨 Unsafe harvest alert sent to regulators (simulation)'); }
 
-// ==================== UTILS ====================
-function generateUUID(){ return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16);}); }
-function toast(msg){ const c=document.getElementById('toastContainer'); const d=document.createElement('div'); d.className='toast'; d.textContent=msg; c.appendChild(d); setTimeout(()=>d.remove(),2500); }
+// ==================== VIEW SWITCHING ====================
 function switchView(view){
   document.querySelectorAll('.veritas-view').forEach(v=>v.classList.remove('active'));
   document.getElementById(`view${view.charAt(0).toUpperCase()+view.slice(1)}`).classList.add('active');
@@ -1619,6 +1206,7 @@ function switchView(view){
   if(view==='respond' && !STATE.respondAuth) setTimeout(()=>toast('Access code: NOAA2026'),600);
   if(view==='alert') startLocationTracking();
 }
+
 function startLocationTracking(){
   if(navigator.geolocation){
     navigator.geolocation.getCurrentPosition(p=>{
@@ -1627,15 +1215,21 @@ function startLocationTracking(){
     });
   }
 }
-// Triple-time display
+
+// ==================== INITIALIZATION ====================
 const now = new Date();
 document.getElementById('tt-gregorian') && (document.getElementById('tt-gregorian').textContent = now.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}));
 document.getElementById('tt-dreamspell') && (document.getElementById('tt-dreamspell').textContent = 'Day 23, Spectral Moon 3/13');
 document.getElementById('tt-hebrew') && (document.getElementById('tt-hebrew').textContent = '17 Nisan 5786');
 
-window.onload = ()=>{
+window.addEventListener('DOMContentLoaded', () => {
+  buildLangSelector();
   if(!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
-};
+  if (typeof CERTUS_TOXIN !== 'undefined' && CERTUS_TOXIN.initialize) {
+    CERTUS_TOXIN.initialize().catch(console.warn);
+  }
+  updateCalibrationPanel();
+});
 </script>
 </body>
 </html>
