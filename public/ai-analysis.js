@@ -4,8 +4,15 @@
 // Update the URL below to match your actual deployed endpoint
 
 const AI_ANALYSIS_SHELLFISH = {
-  // YOUR VERCEL API ENDPOINT — UPDATE THIS TO YOUR DEPLOYED URL
-  API_URL: 'https://veritas-flax-eta.vercel.app/api/analyze-strip',
+  // NEW Vercel backend URL
+  API_URL: 'https://veritas-shellfish.vercel.app/api/analyze-strip',
+  
+  async analyzeStrip(imageDataUrl, toxinType = null) {
+    // ... rest of function unchanged
+  },
+  
+  // ... rest of module unchanged
+};
   
   /**
    * Analyze a lateral flow assay (LFA) strip photo by calling your Vercel backend.
