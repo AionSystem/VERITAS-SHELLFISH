@@ -1756,12 +1756,12 @@ document.getElementById('tt-gregorian') && (document.getElementById('tt-gregoria
 document.getElementById('tt-dreamspell') && (document.getElementById('tt-dreamspell').textContent = 'Day 23, Spectral Moon 3/13');
 document.getElementById('tt-hebrew') && (document.getElementById('tt-hebrew').textContent = '17 Nisan 5786');
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   buildLangSelector();
   if(!navigator.onLine) document.getElementById('offlineBanner').classList.add('show');
   document.getElementById('syncQueue').style.display = 'none';
   if (typeof CERTUS_TOXIN !== 'undefined' && CERTUS_TOXIN.initialize) {
-    CERTUS_TOXIN.initialize().catch(console.warn);
+   await CERTUS_TOXIN.initialize().catch(console.warn);
   }
   updateCalibrationPanel();
 });
