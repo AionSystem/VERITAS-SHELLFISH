@@ -912,7 +912,93 @@ function verifySeal(){
 
 // ==================== EXPORT & STP (mock) ====================
 async function exportData(fmt){ toast(`${fmt.toUpperCase()} export ready (simulation)`); }
-async function stampWithSTP(){ toast('🔒 STP seal created (simulation)'); }
+// ==================== STP SEAL (Updated for Shellfish) ====================
+async function stampWithSTP() {
+  const reports = STATE.reports;
+  if (reports.length === 0) {
+    toast('No reports to seal');
+    return;
+  }
+  
+  toast('Creating STP seal...');
+  
+  const clean = reports.map(r => ({
+    uuid: r.uuid,
+    timestamp: r.timestamp,
+    lat: r.lat,
+    lng: r.lng,
+    species: r.species,
+    toxin_type: r.toxinType,
+    test_result: r.testResult,
+    tci: r.confidenceScore,
+    tci_tier: r.confidenceTier
+  }));
+  
+  const datasetStr = JSON.stringify(clean, null, 2);
+  const datasetHash = await computeHash(datasetStr);
+  const timestamp = new Date().toISOString();
+  
+  const entry = `VERITAS‑SHELLFISH Export\nTimestamp: ${timestamp}\nTests: ${reports.length}\nDataset SHA-256: ${datasetHash}\nPowered by CERTUS‑TOXIN v1.1\nNOFO: NOAA‑NOS‑NCCOS‑2026‑32955`;
+  
+  const btn = document.getElementById('stpSealBtn');
+  const originalText = btn.textContent;
+  btn.textContent = 'Sealing...';
+  btn.disabled = true;
+  
+  try {
+    // UPDATED: Point to new Vercel deployment
+    const response = await fetchWithTimeout(`${CONFIG.VERCEL_API_URL}/api/stp-seal-shellfish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        entry: entry,
+        type: '19', // SHELLFISH-EXPORT template
+        sessionId: 'shellfish-export-' + timestamp,
+        userId: null,
+        fields: {
+          tests_count: reports.length,
+          dataset_hash: datasetHash,
+          export_timestamp: timestamp
+        }
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+    
+    const seal = await response.json();
+    if (!seal.success) throw new Error(seal.error || 'Seal failed');
+    
+    currentSTPSeal = {
+      ...seal,
+      datasetHash,
+      reportsCount: reports.length,
+      exportTimestamp: timestamp,
+      local: false
+    };
+    
+    displaySTPSeal(currentSTPSeal);
+    toast('✅ STP seal created and uploaded to GitHub!');
+    
+  } catch (err) {
+    console.error('[STP] Seal error:', err);
+    currentSTPSeal = {
+      seal: datasetHash,
+      datasetHash,
+      reportsCount: reports.length,
+      exportTimestamp: timestamp,
+      local: true,
+      error: err.message
+    };
+    displaySTPSeal(currentSTPSeal);
+    toast(`⚠️ Local seal only. GitHub error: ${err.message}`);
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+}
 
 // ==================== ALERT ====================
 function sendHarvestAlert(){ toast('🚨 Unsafe harvest alert sent to regulators (simulation)'); }
