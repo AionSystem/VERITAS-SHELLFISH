@@ -99,63 +99,51 @@ self.addEventListener('fetch', event => {
 
 // Background Sync — push queued offline tests to Supabase
 self.addEventListener('sync', event => {
-  if (event.tag === 'shellfish-sync-tests') {
+  if (event.tag === 'shellfish-sync-tests') { // UPDATED sync tag
     console.log('[SW:Shellfish] Background sync: shellfish-sync-tests');
     event.waitUntil(syncQueuedTests());
   }
 });
 
-/*
- * syncQueuedTests()
- * Reads all unsynced toxin tests from IndexedDB and POSTs each to Supabase.
- */
+// In syncQueuedTests() — update the payload and table name
 async function syncQueuedTests() {
-  try {
-    const db = await openShellfishDB();
-    const allTests = await getAllTests(db);
-    
-    const unsynced = allTests.filter(t => !t.synced);
-    if (unsynced.length === 0) {
-      console.log('[SW:Shellfish] No unsynced tests found.');
-      return;
-    }
-    
-    console.log(`[SW:Shellfish] Syncing ${unsynced.length} queued test(s)...`);
-    
-    for (const test of unsynced) {
-      try {
-        const payload = {
-          uuid: test.uuid,
-          timestamp: test.timestamp,
-          lat: test.lat,
-          lng: test.lng,
-          species: test.species,
-          toxin_type: test.toxinType,
-          test_result: test.testResult,
-          lot_number: test.lotNumber,
-          harvest_time: test.harvestTime,
-          tci: test.confidenceScore,
-          tci_tier: test.confidenceTier,
-          loc_mode: test.locMode,
-          text_loc: test.textLocation || '',
-          strip_ai_score: test.photoAiScore,
-          strip_ai_conf: test.photoAiConf,
-          freshness: test.freshness
-        };
-        
-        const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/shellfish_tests`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': SUPABASE_ANON,
-              'Authorization': `Bearer ${SUPABASE_ANON}`,
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify(payload)
-          }
-        );
+  // ... database open code unchanged ...
+  
+  for (const test of unsynced) {
+    try {
+      const payload = {
+        uuid: test.uuid,
+        timestamp: test.timestamp,
+        lat: test.lat,
+        lng: test.lng,
+        species: test.species,
+        toxin_type: test.toxinType,
+        test_result: test.testResult,
+        lot_number: test.lotNumber,
+        harvest_time: test.harvestTime,
+        tci: test.confidenceScore,
+        tci_tier: test.confidenceTier,
+        loc_mode: test.locMode,
+        text_loc: test.textLocation || '',
+        strip_ai_score: test.photoAiScore,
+        strip_ai_conf: test.photoAiConf,
+        freshness: test.freshness
+      };
+      
+      // UPDATED: Use shellfish_tests table
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/shellfish_tests`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON,
+            'Authorization': `Bearer ${SUPABASE_ANON}`,
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(payload)
+        }
+      );
         
         if (response.ok) {
           await markTestSynced(db, test.uuid);
