@@ -1,3 +1,5 @@
+![1000008677](https://github.com/user-attachments/assets/3c384bfa-10c7-40cf-8852-100912a9cc14)
+
 # VERITAS‑SHELLFISH — HAB Toxin Detection Platform
 
 <!-- STATUS · VERSION · COMPLIANCE -->
