@@ -1280,54 +1280,80 @@ function populateSummary() {
 }
 
 async function submitReport() {
-  if (!STATE.coords) { toast('Pin harvest location'); return; }
+  if (!STATE.coords) { 
+    toast('Pin harvest location'); 
+    return; 
+  }
+  
   const btn = document.getElementById('submitBtn');
-  btn.disabled = true; btn.textContent = 'SEALING...';
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'SEALING...';
   
-  let freshness = 0.8;
-  if (STATE.harvestTime) {
-    const harvestDate = new Date(STATE.harvestTime);
-    const now = new Date();
-    const hoursSinceHarvest = (now - harvestDate) / (1000 * 60 * 60);
-    freshness = Math.max(0.2, 1.0 - (hoursSinceHarvest / 60));
+  try {
+    let freshness = 0.8;
+    if (STATE.harvestTime) {
+      const harvestDate = new Date(STATE.harvestTime);
+      const now = new Date();
+      const hoursSinceHarvest = (now - harvestDate) / (1000 * 60 * 60);
+      freshness = Math.max(0.2, 1.0 - (hoursSinceHarvest / 60));
+    }
+    
+    const report = {
+      uuid: generateUUID(),
+      timestamp: new Date().toISOString(),
+      lat: STATE.coords.lat,
+      lng: STATE.coords.lng,
+      testResult: STATE.testResult,
+      species: STATE.species,
+      toxinType: STATE.toxinType,
+      lotNumber: STATE.lotNumber,
+      harvestTime: STATE.harvestTime,
+      stripPhoto: STATE.photo,
+      stripAiScore: STATE.photoAiScore,
+      stripAiConf: STATE.photoAiConf,
+      freshness: freshness,
+      reporter_id: null
+    };
+    
+    // Score with CERTUS‑TOXIN or fallback
+    if (typeof CERTUS_TOXIN !== 'undefined' && CERTUS_TOXIN.score) {
+      const tciResult = await CERTUS_TOXIN.score(report, [], true);
+      report.confidenceScore = tciResult.tci;
+      report.confidenceTier = tciResult.tier;
+      report.signalConfidence = tciResult.tci_scs;
+      report.corroboration = tciResult.tci_cor;
+      report.matrixConsistency = tciResult.tci_mcs;
+      report.uncertaintyMass = tciResult.tci_uncertainty_mass;
+      report.validityStatus = tciResult.tci_validity_status;
+    } else {
+      const baseScore = 0.65 + Math.random() * 0.30;
+      const tci = baseScore * (0.7 + 0.3 * freshness);
+      const tier = tci >= 0.70 ? 'high' : (tci >= 0.40 ? 'watch' : 'review');
+      report.confidenceScore = tci;
+      report.confidenceTier = tier;
+      report.signalConfidence = STATE.photoAiScore || 0.5;
+      report.corroboration = 0.5;
+      report.matrixConsistency = 0.7;
+      report.uncertaintyMass = 0.3;
+      report.validityStatus = tier === 'high' ? 'VALID' : 'DEGRADED';
+    }
+    
+    STATE.reports.push(report);
+    
+    if (CONFIG.USE_SUPABASE && STATE.isOnline) {
+      syncToSupabase(report).catch(console.warn);
+    }
+    
+    showConfirmation(report);
+    
+  } catch (error) {
+    console.error('Submission error:', error);
+    toast('Submission failed — please try again');
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
-  
-  const report = {
-    uuid: generateUUID(), timestamp: new Date().toISOString(),
-    lat: STATE.coords.lat, lng: STATE.coords.lng,
-    testResult: STATE.testResult, species: STATE.species, toxinType: STATE.toxinType,
-    lotNumber: STATE.lotNumber, harvestTime: STATE.harvestTime,
-    stripPhoto: STATE.photo, stripAiScore: STATE.photoAiScore, stripAiConf: STATE.photoAiConf,
-    freshness: freshness, reporter_id: null
-  };
-  
-  let tciResult;
-  if (typeof CERTUS_TOXIN !== 'undefined' && CERTUS_TOXIN.score) {
-    tciResult = await CERTUS_TOXIN.score(report, [], true);
-    report.confidenceScore = tciResult.tci;
-    report.confidenceTier = tciResult.tier;
-    report.signalConfidence = tciResult.tci_scs;
-    report.corroboration = tciResult.tci_cor;
-    report.matrixConsistency = tciResult.tci_mcs;
-    report.uncertaintyMass = tciResult.tci_uncertainty_mass;
-    report.validityStatus = tciResult.tci_validity_status;
-  } else {
-    const baseScore = 0.65 + Math.random() * 0.30;
-    const tci = baseScore * (0.7 + 0.3 * freshness);
-    const tier = tci >= 0.70 ? 'high' : (tci >= 0.40 ? 'watch' : 'review');
-    report.confidenceScore = tci; report.confidenceTier = tier;
-    report.signalConfidence = STATE.photoAiScore || 0.5;
-    report.corroboration = 0.5;
-    report.matrixConsistency = 0.7;
-    report.uncertaintyMass = 0.3;
-    report.validityStatus = tier==='high'?'VALID':'DEGRADED';
-  }
-  
-  STATE.reports.push(report);
-  if (CONFIG.USE_SUPABASE && STATE.isOnline) {
-    syncToSupabase(report).catch(console.warn);
-  }
-  showConfirmation(report);
+  // Note: Button is NOT re-enabled on success because we navigate away from the form
 }
 
 function showConfirmation(report) {
@@ -1361,16 +1387,56 @@ function showConfirmation(report) {
 }
 
 function resetReport() {
-  STATE.photo = null; STATE.testResult = null; STATE.species = null; STATE.coords = null;
-  STATE.photoAiScore = null; STATE.photoAiConf = null;
+  // ===== 1. RESET ALL STATE PROPERTIES =====
+  STATE.photo = null;
+  STATE.testResult = null;
+  STATE.species = null;
+  STATE.coords = null;
+  STATE.photoAiScore = null;
+  STATE.photoAiConf = null;
+  STATE.currentStep = 1; // ← CRITICAL FIX
+  STATE.toxinType = 'PST';
+  STATE.lotNumber = '';
+  STATE.harvestTime = null;
+  STATE.locMode = 'precise';
+  STATE.textLocation = null;
   
+  // ===== 2. HIDE CONFIRMATION, SHOW FORM =====
   document.getElementById('confirmScreen').classList.remove('show');
   document.getElementById('reportForm').style.display = '';
+  
+  // ===== 3. RESET PHOTO ZONE =====
   document.getElementById('photoPreview').classList.remove('show');
   document.getElementById('photoRetake').classList.remove('show');
   document.getElementById('photoZone').classList.remove('has-photo');
   document.getElementById('photoAiStatus').classList.remove('show');
+  document.getElementById('photoInput').value = '';
   
+  // ===== 4. RESET ALL STEP PANELS =====
+  for (let i = 1; i <= 5; i++) {
+    const panel = document.getElementById(`step${i}`);
+    const circle = document.getElementById(`sc${i}`);
+    const label = document.getElementById(`sl${i}`);
+    if (panel) panel.classList.remove('active');
+    if (circle) {
+      circle.classList.remove('active', 'done');
+      circle.textContent = i;
+    }
+    if (label) label.classList.remove('active');
+  }
+  
+  // ===== 5. RESET PROGRESS LINES =====
+  for (let i = 1; i <= 4; i++) {
+    const line = document.getElementById(`sline${i}`);
+    if (line) line.classList.remove('done');
+  }
+  
+  // ===== 6. ACTIVATE ONLY STEP 1 =====
+  document.getElementById('step1').classList.add('active');
+  document.getElementById('sc1').classList.add('active');
+  document.getElementById('sl1').classList.add('active');
+  
+  // ===== 7. RESET ALL NAVIGATION BUTTONS =====
   document.getElementById('step1Next').disabled = true;
   document.getElementById('step2Next').disabled = true;
   document.getElementById('step4Next').disabled = true;
@@ -1379,24 +1445,30 @@ function resetReport() {
   submitBtn.disabled = false;
   submitBtn.textContent = 'SEAL & SUBMIT';
   
-  for(let i=1;i<=5;i++){ 
-    const sc=document.getElementById(`sc${i}`); 
-    sc.classList.remove('active','done'); 
-    sc.textContent=i; 
-  }
-  document.getElementById('step1').classList.add('active');
-  document.getElementById('sc1').classList.add('active');
-  document.getElementById('sl1').classList.add('active');
-  
-  document.querySelectorAll('.result-btn, .species-btn').forEach(b=>b.classList.remove('selected'));
+  // ===== 8. CLEAR ALL SELECTIONS =====
+  document.querySelectorAll('.result-btn, .species-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('locPrecise').classList.add('selected');
   document.getElementById('locFuzzy').classList.remove('selected');
   document.getElementById('fuzzyNotice').style.display = 'none';
+  
+  // ===== 9. CLEAR ALL INPUT FIELDS =====
   document.getElementById('textLocation').value = '';
   document.getElementById('lotNumber').value = '';
   document.getElementById('harvestTime').value = '';
+  document.getElementById('toxinType').value = 'PST';
   
-  window.scrollTo(0,0);
+  // ===== 10. RESET MAP =====
+  if (STATE.reportMap) {
+    STATE.reportMap.remove();
+    STATE.reportMap = null;
+    STATE.reportMarker = null;
+  }
+  const mapContainer = document.getElementById('locationMap');
+  if (mapContainer) mapContainer.innerHTML = '';
+  document.getElementById('gpsCoords').innerHTML = '<span style="color:var(--muted)">Acquiring GPS...</span>';
+  
+  // ===== 11. SCROLL TO TOP =====
+  window.scrollTo(0, 0);
 }
 
 // ==================== RESPOND DASHBOARD ====================
